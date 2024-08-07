@@ -1,0 +1,13 @@
+{
+  "author": [
+    "EvilSquirrelGuy",
+    "ZeeRaider"
+  ],
+  "description": "A cog that implements the economy system for the Waterfall Gaming bot. Based off how CoreBot did it (rip)",
+  "install_msg": "Make sure to play genshin impact when evil asks you to :)",
+  "short": "Economy for Waterfall Gaming",
+  "type": "COG",
+  "end_user_daa_statement": "This cog does not store any user data.",
+  "hidden": false,
+  "disabled": false
+}
