@@ -1,7 +1,8 @@
 {
   "author": [
-    "EvilSquirrelGuy"
+    "EvilSquirrelGuy (@evilsquirrelguy)"
   ],
+  "name": "Waterfall Verification",
   "description": "A cog that implements a verification system for Waterfall Gaming.",
   "install_msg": "Make sure to play genshin impact when evil asks you to :)",
   "short": "Verification for Waterfall Gaming",

@@ -1,8 +1,9 @@
 {
   "author": [
-    "EvilSquirrelGuy"
+    "EvilSquirrelGuy (@evilsquirrelguy)"
   ],
-  "description": "A collection of cogs for Waterfall Gaming's discord bot.",
+  "name": "Lorax Cogs",
   "install_msg": "Got Questions? Well I don't have any answers so uh, good luck :)\nJust play Genshin Impact instead and everyone will be happy.",
-  "short": "Lorax Cogs for Waterfall Gaming"
+  "description": "A collection of cogs for Waterfall Gaming's discord bot.",
+  "short": "Cogs for Waterfall Gaming's Lorax bot."
 }

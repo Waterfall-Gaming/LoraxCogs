@@ -2,6 +2,7 @@
   "author": [
     "EvilSquirrelGuy"
   ],
+  "name": "Waterfall Economy",
   "description": "A cog that implements the economy system for the Waterfall Gaming bot. Based off how CoreBot did it (rip)",
   "install_msg": "Make sure to play genshin impact when evil asks you to :)",
   "short": "Economy for Waterfall Gaming",
