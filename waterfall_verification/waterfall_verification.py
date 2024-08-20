@@ -197,12 +197,12 @@ class WaterfallVerification(commands.Cog):
     ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
 
     if role.id in ignored_roles:
-      await ctx.send(embed=self._error_embed("That role is already being ignored for verification."))
+      await ctx.send(embed=self._error_embed("That role already bypasses verification."))
       return
 
     ignored_roles.append(role.id)
     await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES.set(ignored_roles)
-    await ctx.send(f"{role.mention} will now be ignored for verification.")
+    await ctx.send(f"{role.mention} will now bypass verification.")
 
   @command_verifyset_ignoreroles.command(name="remove")
   async def command_verifyset_ignoreroles_remove(self, ctx, role: discord.Role):
@@ -210,12 +210,12 @@ class WaterfallVerification(commands.Cog):
     ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
 
     if role.id not in ignored_roles:
-      await ctx.send(embed=self._error_embed("That role is not being ignored for verification."))
+      await ctx.send(embed=self._error_embed("That role cannot bypass verification."))
       return
 
     ignored_roles.remove(role.id)
     await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES.set(ignored_roles)
-    await ctx.send(f"{role.mention} will no longer be ignored for verification.")
+    await ctx.send(f"{role.mention} will no longer bypass verification.")
 
   @command_verifyset_ignoreroles.command(name="list")
   async def command_verifyset_ignoreroles_list(self, ctx):
@@ -223,7 +223,7 @@ class WaterfallVerification(commands.Cog):
     ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
 
     if not ignored_roles:
-      await ctx.send(embed=self._error_embed("No roles are being ignored for verification."))
+      await ctx.send(embed=self._error_embed("No roles can bypass verification."))
       return
 
     roles = [ctx.guild.get_role(role_id).mention for role_id in ignored_roles]
@@ -423,7 +423,7 @@ class WaterfallVerification(commands.Cog):
     # check if the user has any roles that allow them to bypass verification
     if any(role.id in ignored_roles for role in user_roles):
       await self._verify_user(ctx, ctx.author)
-      await ctx.send(embed=discord.Embed(
+      return await ctx.send(embed=discord.Embed(
         title="Verification Bypassed",
         description="You have been automatically verified due to your role permissions.",
         color=discord.Color.gold()
