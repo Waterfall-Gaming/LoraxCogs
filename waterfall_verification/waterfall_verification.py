@@ -337,9 +337,17 @@ class WaterfallVerification(commands.Cog):
         "The verification role has not been set up. Please make sure this is configured before running the command."))
       return
 
+    ignore_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
     async with ctx.typing():
       async for member in ctx.guild.fetch_members(limit=None):
         verified = await self.config.member(member).verified()
+
+        user_roles = [role for role in member.roles]
+
+        if any(role.id in ignore_roles for role in user_roles):
+          # skip the user if they have a role that allows them to bypass verification
+          continue
 
         if verified:
           # give the user the verified role and remove the unverified role
@@ -392,7 +400,11 @@ class WaterfallVerification(commands.Cog):
     """Bypass the verification process for a user."""
 
     # verify the user
-    await self._verify_user(ctx, user)
+    verify_status = await self._verify_user(ctx, user)
+
+    if verify_status is not None:
+      # since the user wasn't verified, exit out of the function
+      return
 
     info_embed = self._admin_info_embed(
       ctx=ctx,
@@ -511,10 +523,15 @@ class WaterfallVerification(commands.Cog):
     verified = await self.config.member(user).verified()
     verified_at = await self.config.member(user).verified_at()
 
+    ignore_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+    user_roles = [role for role in user.roles]
+
     if verified:
-      status = "✔ Verified"
+      status = ":heavy_check_mark: Verified"
+    elif any(role.id in ignore_roles for role in user_roles):
+      status = ":information_source: Bypasses Verification"
     else:
-      status = "❌ Unverified"
+      status = ":x: Unverified"
 
     if verified_at is not None:
       verified_at = "%s (%s)" % (
@@ -525,7 +542,7 @@ class WaterfallVerification(commands.Cog):
     embed = discord.Embed(
       title=f"{user.display_name}'s Verification Status",
       description=f"User: {user.mention}",
-      color=discord.Color.dark_green() if verified else discord.Color.dark_red(),
+      color=discord.Color.dark_green() if verified else discord.Color.red(),
     )
 
     embed.add_field(name="Status", value=status, inline=False)
