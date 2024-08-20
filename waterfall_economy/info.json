@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
   "author": [
     "EvilSquirrelGuy"
   ],
@@ -9,5 +10,6 @@
   "type": "COG",
   "end_user_data_statement": "This cog does not store any user data.",
   "hidden": false,
-  "min_bot_version": "3.5.0"
+  "disabled": false,
+  "min_bot_version": "3.5.0",
 }

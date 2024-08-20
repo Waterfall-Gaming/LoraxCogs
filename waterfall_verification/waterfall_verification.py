@@ -223,6 +223,50 @@ class WaterfallVerification(commands.Cog):
     await ctx.author.send(embed=verification_embed)
     await ctx.message.delete(delay=5.0)
 
+  @commands.command(name="verifyinfo")
+  async def command_verifyinfo(self, ctx, user: discord.Member = None):
+    """Get information about a user's verification status."""
+
+    if user is None:
+      user = ctx.author
+
+    if not ctx.author.guild_permissions.administrator and user.id != ctx.author.id:
+      await ctx.send(embed=discord.Embed(
+        title="Error",
+        description="You must be an administrator to view another user's verification status.",
+        color=discord.Color.red()
+      ))
+      return
+
+    verified = await self.config.member(user).verified()
+    verified_at = await self.config.member(user).verified_at()
+
+    if verified:
+      status = "Verified"
+    else:
+      status = "Unverified"
+
+    if verified_at is not None:
+      verified_at = "%s (%s)" % (
+        discord.utils.format_dt(datetime.fromtimestamp(verified_at), "F"),
+        discord.utils.format_dt(datetime.fromtimestamp(verified_at), "R")
+      )
+
+    embed = discord.Embed(
+      title=f"{user.name} Verification Status",
+      description=f"User: {user.mention}",
+      color=discord.Color.blue()
+    )
+
+    embed.add_field(name="Status", value=status, inline=True)
+
+    if verified_at is not None:
+      embed.add_field(name="Verified At", value=verified_at, inline=True)
+
+    embed.set_thumbnail(url=user.avatar.url)
+
+    await ctx.send(embed=embed)
+
   @commands.Cog.listener(name="on_message")
   async def listen_for_verification_codes(self, message):
     if message.author.bot:
