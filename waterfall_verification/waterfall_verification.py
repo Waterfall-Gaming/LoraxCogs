@@ -174,7 +174,7 @@ class WaterfallVerification(commands.Cog):
     verified_role = ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE())
 
     # make the bot type while it's working
-    with self.bot.typing():
+    async with ctx.typing():
       # iterate through all text channels in the server
       for channel in ctx.guild.text_channels:
         # check each message in the channel
