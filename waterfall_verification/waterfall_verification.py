@@ -526,9 +526,11 @@ class WaterfallVerification(commands.Cog):
     ignore_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
     user_roles = [role for role in user.roles]
 
+    bypass = any(role.id in ignore_roles for role in user_roles)
+
     if verified:
       status = ":heavy_check_mark: Verified"
-    elif any(role.id in ignore_roles for role in user_roles):
+    elif bypass:
       status = ":information_source: Bypasses Verification"
     else:
       status = ":x: Unverified"
@@ -542,7 +544,7 @@ class WaterfallVerification(commands.Cog):
     embed = discord.Embed(
       title=f"{user.display_name}'s Verification Status",
       description=f"User: {user.mention}",
-      color=discord.Color.dark_green() if verified else discord.Color.red(),
+      color=discord.Color.dark_green() if verified else discord.Color.gold() if bypass else discord.Color.red(),
     )
 
     embed.add_field(name="Status", value=status, inline=False)
@@ -550,7 +552,7 @@ class WaterfallVerification(commands.Cog):
     if verified_at is not None:
       embed.add_field(name="Verified At", value=verified_at, inline=False)
 
-    if not verified:
+    if not verified and not bypass:
       verification_code = await self.config.member(user).verification_code()
       code_expires_at = await self.config.member(user).code_expires_at()
 
