@@ -320,6 +320,8 @@ class WaterfallVerification(commands.Cog):
     )
 
     inactive_users = list(inactive_users)
+    # alphabetical order :)
+    inactive_users.sort(key=lambda x: x.display_name)
 
     # turn the list of users into columns of 12 users each
 
@@ -327,7 +329,7 @@ class WaterfallVerification(commands.Cog):
 
     while len(inactive_users) > 12:
       inactive_users = inactive_users[12:]
-      info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users[:12]]), inline=True)
+      info_embed.add_field(name=" ", value="\n".join([user.mention for user in inactive_users[:12]]), inline=True)
 
     await ctx.send(embed=info_embed)
 
