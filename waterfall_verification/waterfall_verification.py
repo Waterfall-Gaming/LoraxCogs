@@ -300,6 +300,8 @@ class WaterfallVerification(commands.Cog):
       ignore_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
 
       for member in verified_role.members:
+        if member.bot:
+          continue
         user_roles = [role for role in member.roles]
         if member not in active_users and not any(role.id in ignore_roles for role in user_roles):
           if confirm:
@@ -317,7 +319,15 @@ class WaterfallVerification(commands.Cog):
       color=discord.Color.dark_red() if confirm else discord.Color.dark_gold()
     )
 
-    info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users]), inline=False)
+    inactive_users = list(inactive_users)
+
+    # turn the list of users into columns of 12 users each
+
+    info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users[:12]]), inline=True)
+
+    while len(inactive_users) > 12:
+      inactive_users = inactive_users[12:]
+      info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users[:12]]), inline=True)
 
     await ctx.send(embed=info_embed)
 
