@@ -135,6 +135,12 @@ class WaterfallVerification(commands.Cog):
   @commands.admin()
   async def command_bypassverify(self, ctx, user: discord.Member):
     """Bypass the verification process for a user."""
+    if await self.config.member(user).verified():
+      await ctx.send(embed=discord.Embed(
+        title="Error",
+        description=f"{user.mention} is already verified."
+      ))
+      return
     # set the user as verified
     await self.config.member(user).verified.set(True)
     # set the time the user was verified
@@ -144,7 +150,7 @@ class WaterfallVerification(commands.Cog):
     if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
       await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
-    await ctx.send(f"{user.mention} has been verified.")
+    await ctx.send(f"{user.mention} has been manually verified.")
 
   @commands.command(name="verify")
   async def command_verify(self, ctx):
@@ -257,9 +263,9 @@ class WaterfallVerification(commands.Cog):
     verified_at = await self.config.member(user).verified_at()
 
     if verified:
-      status = "Verified"
+      status = "✔ Verified"
     else:
-      status = "Unverified"
+      status = "❌ Unverified"
 
     if verified_at is not None:
       verified_at = "%s (%s)" % (
@@ -270,13 +276,29 @@ class WaterfallVerification(commands.Cog):
     embed = discord.Embed(
       title=f"{user.display_name}'s Verification Status",
       description=f"User: {user.mention}",
-      color=discord.Color.blue()
+      color=discord.Color.dark_green() if verified else discord.Color.dark_red(),
     )
 
-    embed.add_field(name="Status", value=status, inline=True)
+    embed.add_field(name="Status", value=status, inline=False)
 
     if verified_at is not None:
-      embed.add_field(name="Verified At", value=verified_at, inline=True)
+      embed.add_field(name="Verified At", value=verified_at, inline=False)
+
+    if not verified:
+      verification_code = await self.config.member(user).verification_code()
+      code_expires_at = await self.config.member(user).code_expires_at()
+
+      embed.add_field(name="Verification Code",
+                      value=verification_code if verification_code is not None else "N/A",
+                      inline=True
+                      )
+
+      embed.add_field(name="Code Expires At",
+                      value=discord.utils.format_dt(
+                        datetime.fromtimestamp(code_expires_at), "F"
+                      ) if code_expires_at is not None else "N/A",
+                      inline=True
+                      )
 
     embed.set_thumbnail(url=user.avatar.url)
 
