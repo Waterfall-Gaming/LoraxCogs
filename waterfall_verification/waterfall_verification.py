@@ -154,7 +154,7 @@ class WaterfallVerification(commands.Cog):
     await ctx.send(embed=info_embed)
 
   @command_unverify.command(name="inactive")
-  async def command_unverify_inactive(self, ctx, days: int, confirm_string: str):
+  async def command_unverify_inactive(self, ctx, days: int, confirm_string: str = None):
     """DANGEROUS: Unverify users who haven't sent messages in a certain number of days."""
     if days < 60:
       await ctx.send("The number of days must be at least 60.")
