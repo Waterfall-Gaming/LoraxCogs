@@ -251,7 +251,11 @@ class WaterfallVerification(commands.Cog):
       return
 
     # unverify the user
-    await self._unverify_user(ctx, user, ignore_errors=True)
+    unverified_status = await self._unverify_user(ctx, user, ignore_errors=True)
+
+    if unverified_status is not None:
+      # since the user wasn't unverified, exit out of the function
+      return
 
     info_embed = self._admin_info_embed(
       ctx=ctx,
@@ -293,8 +297,11 @@ class WaterfallVerification(commands.Cog):
             continue
           active_users.add(message.author)
 
+      ignore_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
       for member in verified_role.members:
-        if member not in active_users:
+        user_roles = [role for role in member.roles]
+        if member not in active_users and not any(role.id in ignore_roles for role in user_roles):
           if confirm:
             # unverify the user if it's not a dry run
             await self._unverify_user(ctx, member, ignore_errors=True)
