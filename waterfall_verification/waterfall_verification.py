@@ -244,7 +244,8 @@ class WaterfallVerification(commands.Cog):
     if await self.config.member(user).verified():
       await ctx.send(embed=discord.Embed(
         title="Error",
-        description=f"{user.mention} is already verified."
+        description=f"{user.mention} is already verified.",
+        color=discord.Color.red()
       ))
       return
     # set the user as verified
