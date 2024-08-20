@@ -113,7 +113,7 @@ class WaterfallVerification(commands.Cog):
 
   @commands.group(name="unverify")
   @commands.admin()
-  async def command_unverify(self, ctx, user: discord.Member):
+  async def command_unverify(self, ctx):
     """Unverify a user/users."""
     pass
 
