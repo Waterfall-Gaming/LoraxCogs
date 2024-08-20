@@ -18,7 +18,8 @@ class WaterfallVerification(commands.Cog):
     "UNVERIFIED_ROLE": None,
     "VERIFICATION_CODE_LENGTH": 6,
     "VERIFICATION_CODE_TYPE": "alphanumeric",
-    "VERIFICATION_CODE_EXPIRY": 300
+    "VERIFICATION_CODE_EXPIRY": 300,
+    "VERIFICATION_IGNORED_ROLES": []
   }
 
   default_global_settings = default_guild_settings
@@ -36,11 +37,80 @@ class WaterfallVerification(commands.Cog):
     super().__init__()
     self.bot = bot
 
-    self.config = Config.get_conf(self, 0x77672e766572696679)
+    self.config = Config.get_conf(self, 0x77672e766572696679)  # wg.verify
     self.config.register_guild(**self.default_guild_settings)
     self.config.register_global(**self.default_global_settings)
     self.config.register_member(**self.default_member_settings)
     self.config.register_user(**self.default_user_settings)
+
+  async def _verify_user(self, ctx, user: discord.Member, ignore_errors=False):
+    """Verify a user. (internal function)"""
+    verified = await self.config.member(user).verified()
+
+    if verified:
+      if ignore_errors:
+        return
+      return await ctx.send(embed=self._error_embed(f"{user.mention} is already verified."))
+    else:
+      # set the user as verified
+      await self.config.member(user).verified.set(True)
+      # set the time the user was verified
+      await self.config.member(user).verified_at.set(datetime.now().timestamp())
+      # add the verification role and remove the unverified role if set
+      await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
+      if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+        await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+
+  async def _unverify_user(self, ctx, user: discord.Member, ignore_errors=False):
+    """Unverifies a member (internal function)"""
+    verified = await self.config.member(user).verified()
+
+    user_roles = [role for role in user.roles]
+    ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
+    if not verified:
+      if ignore_errors:
+        return
+      return await ctx.send(embed=self._error_embed(f"{user.mention} is not verified."))
+    elif any(role.id in ignored_roles for role in user_roles):
+      return await ctx.send(embed=self._error_embed(f"{user.mention} cannot be unverified due to their role permissions."))
+    else:
+      # remove verified status
+      await self.config.member(user).verified.set(False)
+      # remove verification timestamp
+      await self.config.member(user).verified_at.set(None)
+      # remove verification code
+      await self.config.member(user).verification_code.set(None)
+      # remove verification code expiry
+      await self.config.member(user).code_expires_at.set(None)
+      # remove the verification role
+      await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
+      # add the unverified role if it exists
+      if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+        await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+
+  @staticmethod
+  def _admin_info_embed(ctx, title: str, description: str, color):
+    """Generate an info embed for an admin command."""
+    info_embed = discord.Embed(
+      title=title,
+      description=description,
+      color=color,
+      timestamp=datetime.now(timezone.utc)
+    )
+
+    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+
+    return info_embed
+
+  @staticmethod
+  def _error_embed(description: str = "Oops...", title: str = "Error"):
+    """Generate an error embed."""
+    return discord.Embed(
+      title=title,
+      description=description,
+      color=discord.Color.red()
+    )
 
   @commands.group(name="verifyset")
   @commands.admin()
@@ -75,10 +145,11 @@ class WaterfallVerification(commands.Cog):
   async def command_verifyset_code_length(self, ctx, length: int):
     """Set the length of the verification code."""
     if length < 1:
-      await ctx.send("The verification code length must be at least 1.")
+      await ctx.send(embed=self._error_embed("The verification code length must be at least 1.", "Invalid Length"))
       return
     elif length > 32:
-      await ctx.send("The verification code must not be longer than 32 characters.")
+      await ctx.send(
+        embed=self._error_embed("The verification code must not be longer than 32 characters.", "Invalid Length"))
       return
     await self.config.guild(ctx.guild).VERIFICATION_CODE_LENGTH.set(length)
     await ctx.send(f"Verification code length set to {length}.")
@@ -88,7 +159,9 @@ class WaterfallVerification(commands.Cog):
     """Set whether the verification code should be alphanumeric."""
     # Check if the code type is valid
     if code_type not in ["alphanumeric", "numeric", "alphabetical"]:
-      await ctx.send("The verification code type must be either alphanumeric, numeric or alphabetical.")
+      await ctx.send(
+        embed=self._error_embed("The verification code type must be either alphanumeric, numeric or alphabetical.",
+                                "Invalid Type"))
       return
     # update the config
     await self.config.guild(ctx.guild).VERIFICATION_CODE_TYPE.set(code_type)
@@ -98,11 +171,13 @@ class WaterfallVerification(commands.Cog):
   async def command_verifyset_code_expiry(self, ctx, expiry: int):
     """Set the expiry time for verification codes (in seconds)."""
     if expiry < 60 and expiry != 0:
-      await ctx.send("The expiry time for verification codes must be at least 60 seconds. (or 0 to disable expiry)")
+      await ctx.send(embed=self._error_embed(
+        "The expiry time for verification codes must be at least 60 seconds. (or 0 to disable expiry)"))
       return
 
     if expiry > 86400:
-      await ctx.send("The expiry time for verification codes must be less than 86400 seconds (24 hours).")
+      await ctx.send(
+        embed=self._error_embed("The expiry time for verification codes must be less than 86400 seconds (24 hours)."))
       return
 
     await self.config.guild(ctx.guild).VERIFICATION_CODE_EXPIRY.set(expiry)
@@ -110,6 +185,53 @@ class WaterfallVerification(commands.Cog):
       await ctx.send("Verification codes will no longer expire.")
     else:
       await ctx.send(f"Verification codes will now expire after {expiry} seconds.")
+
+  @command_verifyset.group(name="ignoreroles")
+  async def command_verifyset_ignoreroles(self, ctx):
+    """Set roles that can bypass verification."""
+    pass
+
+  @command_verifyset_ignoreroles.command(name="add")
+  async def command_verifyset_ignoreroles_add(self, ctx, role: discord.Role):
+    """Allow a role to bypass verification."""
+    ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
+    if role.id in ignored_roles:
+      await ctx.send(embed=self._error_embed("That role is already being ignored for verification."))
+      return
+
+    ignored_roles.append(role.id)
+    await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES.set(ignored_roles)
+    await ctx.send(f"{role.mention} will now be ignored for verification.")
+
+  @command_verifyset_ignoreroles.command(name="remove")
+  async def command_verifyset_ignoreroles_remove(self, ctx, role: discord.Role):
+    """Remove a role from being able to bypass verification."""
+    ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
+    if role.id not in ignored_roles:
+      await ctx.send(embed=self._error_embed("That role is not being ignored for verification."))
+      return
+
+    ignored_roles.remove(role.id)
+    await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES.set(ignored_roles)
+    await ctx.send(f"{role.mention} will no longer be ignored for verification.")
+
+  @command_verifyset_ignoreroles.command(name="list")
+  async def command_verifyset_ignoreroles_list(self, ctx):
+    """List the roles that can bypass verification."""
+    ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
+    if not ignored_roles:
+      await ctx.send(embed=self._error_embed("No roles are being ignored for verification."))
+      return
+
+    roles = [ctx.guild.get_role(role_id).mention for role_id in ignored_roles]
+    await ctx.send(embed=discord.Embed(
+      title="Ignored Roles",
+      description="\n".join(roles),
+      color=discord.Color.dark_gold()
+    ))
 
   @commands.group(name="unverify")
   @commands.admin()
@@ -122,34 +244,21 @@ class WaterfallVerification(commands.Cog):
     """Unverify a user."""
     # skip if the user is already unverified
     if not await self.config.member(user).verified():
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description=f"{user.mention} is not verified.\nRun `{ctx.prefix}syncverify user {user.id}` to refresh their verification status.",
-        color=discord.Color.red()
+      await ctx.send(embed=self._error_embed(
+        description=f"{user.mention} is not verified.\n\n"
+                    f"Run `{ctx.prefix}syncverify user {user.id}` to refresh their verification status instead."
       ))
       return
-    # remove verified status
-    await self.config.member(user).verified.set(False)
-    # remove verification timestamp
-    await self.config.member(user).verified_at.set(None)
-    # remove verification code
-    await self.config.member(user).verification_code.set(None)
-    # remove verification code expiry
-    await self.config.member(user).code_expires_at.set(None)
-    # remove the verification role
-    await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
-    # add the unverified role if it exists
-    if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
-      await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
-    info_embed = discord.Embed(
+    # unverify the user
+    await self._unverify_user(ctx, user, ignore_errors=True)
+
+    info_embed = self._admin_info_embed(
+      ctx=ctx,
       title="User Unverified",
       description=f"{user.mention} has been unverified.",
-      color=discord.Color.dark_red(),
-      timestamp=datetime.now(timezone.utc)
+      color=discord.Color.dark_red()
     )
-
-    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
     await ctx.send(embed=info_embed)
 
@@ -157,11 +266,12 @@ class WaterfallVerification(commands.Cog):
   async def command_unverify_inactive(self, ctx, days: int, confirm_string: str = None):
     """DANGEROUS: Unverify users who haven't sent messages in a certain number of days."""
     if days < 60:
-      await ctx.send("The number of days must be at least 60.")
+      await ctx.send(embed=self._error_embed("The number of days must be at least 60."))
       return
 
     if days > 730:
-      await ctx.send("The number of days must be less than 730.\nThis is to avoid encountering rate limits.")
+      await ctx.send(embed=self._error_embed(
+        "The number of days must be less than 730.\nThis is to avoid encountering rate limits."))
       return
 
     confirm = confirm_string == "confirm"
@@ -187,27 +297,20 @@ class WaterfallVerification(commands.Cog):
         if member not in active_users:
           if confirm:
             # unverify the user if it's not a dry run
-            await self.config.member(member).verified.set(False)
-            await self.config.member(member).verified_at.set(None)
-            await self.config.member(member).verification_code.set(None)
-            await self.config.member(member).code_expires_at.set(None)
-            await member.remove_roles(verified_role)
-            if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
-              await member.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+            await self._unverify_user(ctx, member, ignore_errors=True)
           inactive_users.add(member)
 
-    info_embed = discord.Embed(
-      title="Inactive Users " + ("Unverified" if confirm else "Flagged for Unverification"),
+    info_embed = self._admin_info_embed(
+      ctx=ctx,
+      title="Inactive Users " +
+            ("Unverified" if confirm else "Flagged for Unverification"),
       description=f"{len(inactive_users)} user{'s have' if len(inactive_users) != 1 else ' has'} been " +
-                  (" unverified." if confirm else " flagged for unverification.\n"
-                   "Please run the command again with `confirm` to complete the process."),
-      color=discord.Color.dark_red() if confirm else discord.Color.dark_gold(),
-      timestamp=current_time
+                  (" unverified." if confirm else " flagged for unverification.\n\n"
+                                                  "Please run the command again with `confirm` to complete the process."),
+      color=discord.Color.dark_red() if confirm else discord.Color.dark_gold()
     )
 
     info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users]), inline=False)
-
-    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
     await ctx.send(embed=info_embed)
 
@@ -220,7 +323,36 @@ class WaterfallVerification(commands.Cog):
   @command_syncverify.command(name="all")
   async def command_syncverify_all(self, ctx):
     """DANGEROUS: Refresh the verification status of all users based on what the bot has configured."""
-    ctx.send("This command is not yet implemented.")
+    verified_role = ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE())
+
+    if verified_role is None:
+      await ctx.send(embed=self._error_embed(
+        "The verification role has not been set up. Please make sure this is configured before running the command."))
+      return
+
+    async with ctx.typing():
+      async for member in ctx.guild.fetch_members(limit=None):
+        verified = await self.config.member(member).verified()
+
+        if verified:
+          # give the user the verified role and remove the unverified role
+          await member.add_roles(verified_role)
+          if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+            await member.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+        else:
+          # remove the verified role and add the unverified role
+          await member.remove_roles(verified_role)
+          if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+            await member.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+
+    info_embed = self._admin_info_embed(
+      ctx=ctx,
+      title="User Verification Synced",
+      description="All users' verification statuses have been synced.",
+      color=discord.Color.dark_gold()
+    )
+
+    await ctx.send(embed=info_embed)
 
   @command_syncverify.command(name="user")
   async def command_syncverify_user(self, ctx, user: discord.Member):
@@ -238,14 +370,12 @@ class WaterfallVerification(commands.Cog):
       if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
         await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
-    info_embed = discord.Embed(
+    info_embed = self._admin_info_embed(
+      ctx=ctx,
       title="User Verification Synced",
       description=f"{user.mention}'s verification status has been synced.",
-      color=discord.Color.dark_gold(),
-      timestamp=datetime.now(timezone.utc)
+      color=discord.Color.dark_gold()
     )
-
-    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
     await ctx.send(embed=info_embed)
 
@@ -253,30 +383,16 @@ class WaterfallVerification(commands.Cog):
   @commands.admin()
   async def command_bypassverify(self, ctx, user: discord.Member):
     """Bypass the verification process for a user."""
-    if await self.config.member(user).verified():
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description=f"{user.mention} is already verified.",
-        color=discord.Color.red()
-      ))
-      return
-    # set the user as verified
-    await self.config.member(user).verified.set(True)
-    # set the time the user was verified
-    await self.config.member(user).verified_at.set(datetime.now().timestamp())
-    # add the verification role and remove the unverified role
-    await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
-    if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
-      await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
-    info_embed = discord.Embed(
+    # verify the user
+    await self._verify_user(ctx, user)
+
+    info_embed = self._admin_info_embed(
+      ctx=ctx,
       title="Verification Bypassed",
       description=f"{user.mention} has been manually verified.",
-      color=discord.Color.gold(),
-      timestamp=datetime.now(timezone.utc)
+      color=discord.Color.gold()
     )
-
-    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
     await ctx.send(embed=info_embed)
 
@@ -286,39 +402,37 @@ class WaterfallVerification(commands.Cog):
 
     # Check if the verification channel has been set up
     if await self.config.guild(ctx.guild).VERIFICATION_CHANNEL() is None:
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description="The verification channel has not been set up. Please contact an administrator.",
-        color=discord.Color.red()
-      ))
+      await ctx.send(
+        embed=self._error_embed("The verification channel has not been set up. Please contact an administrator."))
       return
 
     # check if a verification role has been set up
     if await self.config.guild(ctx.guild).VERIFICATION_ROLE() is None:
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description="The verification role has not been set up. Please contact an administrator.",
-        color=discord.Color.red()
-      ))
+      await ctx.send(
+        embed=self._error_embed("The verification role has not been set up. Please contact an administrator."))
       return
 
     # check if the user is already verified
     if await self.config.member(ctx.author).verified():
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description="You have already been verified.",
-        color=discord.Color.red()
-      ))
+      await ctx.send(embed=self._error_embed("You have already been verified."))
       return
+
+    user_roles = [role for role in ctx.author.roles]
+    ignored_roles = await self.config.guild(ctx.guild).VERIFICATION_IGNORED_ROLES()
+
+    # check if the user has any roles that allow them to bypass verification
+    if any(role.id in ignored_roles for role in user_roles):
+      await self._verify_user(ctx, ctx.author)
+      await ctx.send(embed=discord.Embed(
+        title="Verification Bypassed",
+        description="You have been automatically verified due to your role permissions.",
+        color=discord.Color.gold()
+      ))
 
     verification_channel = ctx.guild.get_channel(await self.config.guild(ctx.guild).VERIFICATION_CHANNEL())
 
     if ctx.message.channel.id != verification_channel.id:
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description=f"Please run the verification command in {verification_channel.mention}.",
-        color=discord.Color.red()
-      ))
+      await ctx.send(embed=self._error_embed(f"Please run the verification command in {verification_channel.mention}."))
       return
 
     current_time = calendar.timegm(ctx.message.created_at.utctimetuple())
@@ -358,7 +472,8 @@ class WaterfallVerification(commands.Cog):
 
     message = f"Your verification code is: `{code}`\n\n" \
               + f"Please send a message containing __only__ this code in {verification_channel.mention}.\n\n" \
-              + (f"This code will expire {expires_at_timestamp}, so make sure you verify quickly!" if code_expiry != 0 else '')
+              + (
+                f"This code will expire {expires_at_timestamp}, so make sure you verify quickly!" if code_expiry != 0 else '')
 
     verification_embed = discord.Embed(
       title="Verification Code",
@@ -380,10 +495,9 @@ class WaterfallVerification(commands.Cog):
       user = ctx.author
 
     if not ctx.author.guild_permissions.administrator and user.id != ctx.author.id:
-      await ctx.send(embed=discord.Embed(
-        title="Error",
-        description="You must be an administrator to view another user's verification status.",
-        color=discord.Color.red()
+      await ctx.send(embed=self._error_embed(
+        title="Permission Error",
+        description="You must be an administrator to view another user's verification status."
       ))
       return
 
@@ -457,23 +571,14 @@ class WaterfallVerification(commands.Cog):
     if message.content.strip() == code:
       # check if the code has expired
       if expires_at <= message.created_at.timestamp() and code_expiry != 0:
-        await message.channel.send(embed=discord.Embed(
-          title="Error",
-          description="That verification code has expired. Please run the verification command again to generate a "
-                      "new code.",
-          color=discord.Color.red()
+        await message.channel.send(embed=self._error_embed(
+          "That verification code has expired. Please run the verification command again to generate a "
+          "new code."
         ))
         return
       # ok, the code matches now
       else:
-        # set the user as verified
-        await self.config.member(author).verified.set(True)
-        # set the time the user was verified
-        await self.config.member(author).verified_at.set(message.created_at.timestamp())
-        # add the verification role and remove the unverified role
-        await author.add_roles(message.guild.get_role(await self.config.guild(message.guild).VERIFICATION_ROLE()))
-        if await self.config.guild(message.guild).UNVERIFIED_ROLE() is not None:
-          await author.remove_roles(message.guild.get_role(await self.config.guild(message.guild).UNVERIFIED_ROLE()))
+        await self._verify_user(message, author)
 
         verified_message = await message.reply(embed=discord.Embed(
           title="Verification Success",
