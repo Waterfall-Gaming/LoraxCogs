@@ -154,11 +154,17 @@ class WaterfallVerification(commands.Cog):
     await ctx.send(embed=info_embed)
 
   @command_unverify.command(name="inactive")
-  async def command_unverify_inactive(self, ctx, days: int, dry_run: bool = False):
+  async def command_unverify_inactive(self, ctx, days: int, confirm_string: str):
     """DANGEROUS: Unverify users who haven't sent messages in a certain number of days."""
     if days < 60:
       await ctx.send("The number of days must be at least 60.")
       return
+
+    if days > 365:
+      await ctx.send("The number of days must be less than 365.\nThis is to avoid encountering rate limits.")
+      return
+
+    confirm = confirm_string == "confirm"
 
     current_time = datetime.now(timezone.utc)
     inactive_time = current_time - timedelta(days=days)
@@ -175,7 +181,7 @@ class WaterfallVerification(commands.Cog):
 
     for member in verified_role.members:
       if member not in active_users:
-        if not dry_run:
+        if confirm:
           # unverify the user if it's not a dry run
           await self.config.member(member).verified.set(False)
           await self.config.member(member).verified_at.set(None)
@@ -187,9 +193,11 @@ class WaterfallVerification(commands.Cog):
         inactive_users.add(member)
 
     info_embed = discord.Embed(
-      title="Inactive Users Unverified" + (" (Dry Run)" if dry_run else ""),
-      description=f"{len(inactive_users)} users have been unverified.",
-      color=discord.Color.dark_red(),
+      title="Inactive Users " + ("Unverified" if confirm else " Flagged for Unverification"),
+      description=f"{len(inactive_users)} users have been " +
+                  (" unverified." if confirm else " flagged for unverification.\n"
+                   "Please run the command again with `confirm` to complete the process."),
+      color=discord.Color.dark_red() if confirm else discord.Color.dark_gold(),
       timestamp=current_time
     )
 
