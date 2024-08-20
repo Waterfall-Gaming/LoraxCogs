@@ -111,9 +111,14 @@ class WaterfallVerification(commands.Cog):
     else:
       await ctx.send(f"Verification codes will now expire after {expiry} seconds.")
 
-  @commands.command(name="unverify")
+  @commands.group(name="unverify")
   @commands.admin()
   async def command_unverify(self, ctx, user: discord.Member):
+    """Unverify a user/users."""
+    pass
+
+  @command_unverify.command(name="user")
+  async def command_unverify_user(self, ctx, user: discord.Member):
     """Unverify a user."""
     # remove verified status
     await self.config.member(user).verified.set(False)
@@ -129,7 +134,87 @@ class WaterfallVerification(commands.Cog):
     if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
       await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
-    await ctx.send(f"{user.mention} has been unverified.")
+    info_embed = discord.Embed(
+      title="User Unverified",
+      description=f"{user.mention} has been unverified.",
+      color=discord.Color.dark_red()
+    )
+
+    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+
+    await ctx.send(embed=info_embed)
+
+  @command_unverify.command(name="inactive")
+  async def command_unverify_inactive(self, ctx, days: int, dry_run: bool = False):
+    """DANGEROUS: Unverify users who haven't sent messages in a certain number of days."""
+    if days < 60:
+      await ctx.send("The number of days must be at least 60.")
+      return
+
+    current_time = datetime.now(timezone.utc)
+    inactive_time = current_time - timedelta(days=days)
+
+    active_users = set()
+    inactive_users = set()
+    verified_role = ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE())
+
+    for channel in ctx.guild.text_channels:
+      async for message in channel.history(after=inactive_time):
+        if message.author.bot or message.author in active_users:
+          continue
+        active_users.add(message.author)
+
+    for member in verified_role.members:
+      if member not in active_users:
+        if not dry_run:
+          # unverify the user if it's not a dry run
+          await self.config.member(member).verified.set(False)
+          await self.config.member(member).verified_at.set(None)
+          await self.config.member(member).verification_code.set(None)
+          await self.config.member(member).code_expires_at.set(None)
+          await member.remove_roles(verified_role)
+          if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+            await member.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+        inactive_users.add(member)
+
+    info_embed = discord.Embed(
+      title="Inactive Users Unverified" + (" (Dry Run)" if dry_run else ""),
+      description=f"{len(inactive_users)} users have been unverified.",
+      color=discord.Color.dark_red()
+    )
+
+    info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users]), inline=False)
+
+    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+
+    await ctx.send(embed=info_embed)
+
+  @commands.group(name="syncverify")
+  @commands.admin()
+  async def command_syncverify(self, ctx):
+    """Refresh the verification status of a user/users."""
+    pass
+
+  @command_syncverify.command(name="all")
+  async def command_syncverify_all(self, ctx):
+    """DANGEROUS COMMAND: Refresh the verification status of all users based on what the bot has configured."""
+    ctx.send("This command is not yet implemented.")
+
+  @command_syncverify.command(name="user")
+  async def command_syncverify_user(self, ctx, user: discord.Member):
+    """Refresh the verification status of a user."""
+    verified = await self.config.member(user).verified()
+
+    if verified:
+      # give the user the verified role and remove the unverified role
+      await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
+      if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+        await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+    else:
+      # remove the verified role and add the unverified role
+      await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
+      if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+        await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
   @commands.command(name="bypassverify")
   @commands.admin()
@@ -150,7 +235,15 @@ class WaterfallVerification(commands.Cog):
     if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
       await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
 
-    await ctx.send(f"{user.mention} has been manually verified.")
+    info_embed = discord.Embed(
+      title="Verification Bypassed",
+      description=f"{user.mention} has been manually verified.",
+      color=discord.Color.gold()
+    )
+
+    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+
+    await ctx.send(embed=info_embed)
 
   @commands.command(name="verify")
   async def command_verify(self, ctx):
