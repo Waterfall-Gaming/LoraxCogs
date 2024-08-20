@@ -1,0 +1,13 @@
+{
+  "author": [
+    "EvilSquirrelGuy",
+    "ZeeRaider"
+  ],
+  "description": "A cog that implements a verification system for Waterfall Gaming.",
+  "install_msg": "Make sure to play genshin impact when evil asks you to :)",
+  "short": "Verification for Waterfall Gaming",
+  "type": "COG",
+  "end_user_daa_statement": "This cog does not store any user data.",
+  "hidden": false,
+  "disabled": false
+}
