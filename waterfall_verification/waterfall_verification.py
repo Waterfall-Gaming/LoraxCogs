@@ -253,7 +253,7 @@ class WaterfallVerification(commands.Cog):
       )
 
     embed = discord.Embed(
-      title=f"{user.name} Verification Status",
+      title=f"{user.display_name}'s Verification Status",
       description=f"User: {user.mention}",
       color=discord.Color.blue()
     )
