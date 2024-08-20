@@ -120,6 +120,14 @@ class WaterfallVerification(commands.Cog):
   @command_unverify.command(name="user")
   async def command_unverify_user(self, ctx, user: discord.Member):
     """Unverify a user."""
+    # skip if the user is already unverified
+    if not await self.config.member(user).verified():
+      await ctx.send(embed=discord.Embed(
+        title="Error",
+        description=f"{user.mention} is not verified.\nRun `{ctx.prefix}syncverify user {user.id}` to refresh their verification status.",
+        color=discord.Color.red()
+      ))
+      return
     # remove verified status
     await self.config.member(user).verified.set(False)
     # remove verification timestamp
@@ -137,7 +145,8 @@ class WaterfallVerification(commands.Cog):
     info_embed = discord.Embed(
       title="User Unverified",
       description=f"{user.mention} has been unverified.",
-      color=discord.Color.dark_red()
+      color=discord.Color.dark_red(),
+      timestamp=datetime.now(timezone.utc)
     )
 
     info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
@@ -180,7 +189,8 @@ class WaterfallVerification(commands.Cog):
     info_embed = discord.Embed(
       title="Inactive Users Unverified" + (" (Dry Run)" if dry_run else ""),
       description=f"{len(inactive_users)} users have been unverified.",
-      color=discord.Color.dark_red()
+      color=discord.Color.dark_red(),
+      timestamp=current_time
     )
 
     info_embed.add_field(name="Users Flagged", value="\n".join([user.mention for user in inactive_users]), inline=False)
@@ -197,7 +207,7 @@ class WaterfallVerification(commands.Cog):
 
   @command_syncverify.command(name="all")
   async def command_syncverify_all(self, ctx):
-    """DANGEROUS COMMAND: Refresh the verification status of all users based on what the bot has configured."""
+    """DANGEROUS: Refresh the verification status of all users based on what the bot has configured."""
     ctx.send("This command is not yet implemented.")
 
   @command_syncverify.command(name="user")
@@ -215,6 +225,17 @@ class WaterfallVerification(commands.Cog):
       await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
       if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
         await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+
+    info_embed = discord.Embed(
+      title="User Verification Synced",
+      description=f"{user.mention}'s verification status has been synced.",
+      color=discord.Color.dark_gold(),
+      timestamp=datetime.now(timezone.utc)
+    )
+
+    info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+
+    await ctx.send(embed=info_embed)
 
   @commands.command(name="bypassverify")
   @commands.admin()
@@ -238,7 +259,8 @@ class WaterfallVerification(commands.Cog):
     info_embed = discord.Embed(
       title="Verification Bypassed",
       description=f"{user.mention} has been manually verified.",
-      color=discord.Color.gold()
+      color=discord.Color.gold(),
+      timestamp=datetime.now(timezone.utc)
     )
 
     info_embed.set_footer(text=f"Action performed by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
