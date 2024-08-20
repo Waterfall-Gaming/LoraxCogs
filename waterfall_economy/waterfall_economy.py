@@ -52,7 +52,7 @@ class WaterfallEconomy(commands.Cog):
     super().__init__()
     self.bot = bot
 
-    self.config = Config.get_conf(self, 0x77672e65636f6e6f6d79)
+    self.config = Config.get_conf(self, 0x77672e65636f6e6f6d79)  # wg.economy
     self.config.register_guild(**self.default_guild_settings)
     self.config.register_global(**self.default_global_settings)
     self.config.register_member(**self.default_member_settings)
