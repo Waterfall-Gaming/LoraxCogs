@@ -160,8 +160,8 @@ class WaterfallVerification(commands.Cog):
       await ctx.send("The number of days must be at least 60.")
       return
 
-    if days > 365:
-      await ctx.send("The number of days must be less than 365.\nThis is to avoid encountering rate limits.")
+    if days > 730:
+      await ctx.send("The number of days must be less than 730.\nThis is to avoid encountering rate limits.")
       return
 
     confirm = confirm_string == "confirm"
@@ -193,8 +193,8 @@ class WaterfallVerification(commands.Cog):
         inactive_users.add(member)
 
     info_embed = discord.Embed(
-      title="Inactive Users " + ("Unverified" if confirm else " Flagged for Unverification"),
-      description=f"{len(inactive_users)} users have been " +
+      title="Inactive Users " + ("Unverified" if confirm else "Flagged for Unverification"),
+      description=f"{len(inactive_users)} user{'s have' if len(inactive_users) != 1 else ' has'} been " +
                   (" unverified." if confirm else " flagged for unverification.\n"
                    "Please run the command again with `confirm` to complete the process."),
       color=discord.Color.dark_red() if confirm else discord.Color.dark_gold(),
