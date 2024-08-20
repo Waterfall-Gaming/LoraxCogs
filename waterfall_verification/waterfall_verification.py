@@ -173,24 +173,28 @@ class WaterfallVerification(commands.Cog):
     inactive_users = set()
     verified_role = ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE())
 
-    for channel in ctx.guild.text_channels:
-      async for message in channel.history(after=inactive_time):
-        if message.author.bot or message.author in active_users:
-          continue
-        active_users.add(message.author)
+    # make the bot type while it's working
+    with self.bot.typing():
+      # iterate through all text channels in the server
+      for channel in ctx.guild.text_channels:
+        # check each message in the channel
+        async for message in channel.history(after=inactive_time):
+          if message.author.bot or message.author in active_users:
+            continue
+          active_users.add(message.author)
 
-    for member in verified_role.members:
-      if member not in active_users:
-        if confirm:
-          # unverify the user if it's not a dry run
-          await self.config.member(member).verified.set(False)
-          await self.config.member(member).verified_at.set(None)
-          await self.config.member(member).verification_code.set(None)
-          await self.config.member(member).code_expires_at.set(None)
-          await member.remove_roles(verified_role)
-          if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
-            await member.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
-        inactive_users.add(member)
+      for member in verified_role.members:
+        if member not in active_users:
+          if confirm:
+            # unverify the user if it's not a dry run
+            await self.config.member(member).verified.set(False)
+            await self.config.member(member).verified_at.set(None)
+            await self.config.member(member).verification_code.set(None)
+            await self.config.member(member).code_expires_at.set(None)
+            await member.remove_roles(verified_role)
+            if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+              await member.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+          inactive_users.add(member)
 
     info_embed = discord.Embed(
       title="Inactive Users " + ("Unverified" if confirm else "Flagged for Unverification"),
