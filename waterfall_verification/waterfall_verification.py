@@ -131,6 +131,21 @@ class WaterfallVerification(commands.Cog):
 
     await ctx.send(f"{user.mention} has been unverified.")
 
+  @commands.command(name="bypassverify")
+  @commands.admin()
+  async def command_bypassverify(self, ctx, user: discord.Member):
+    """Bypass the verification process for a user."""
+    # set the user as verified
+    await self.config.member(user).verified.set(True)
+    # set the time the user was verified
+    await self.config.member(user).verified_at.set(datetime.now().timestamp())
+    # add the verification role and remove the unverified role
+    await user.add_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).VERIFICATION_ROLE()))
+    if await self.config.guild(ctx.guild).UNVERIFIED_ROLE() is not None:
+      await user.remove_roles(ctx.guild.get_role(await self.config.guild(ctx.guild).UNVERIFIED_ROLE()))
+
+    await ctx.send(f"{user.mention} has been verified.")
+
   @commands.command(name="verify")
   async def command_verify(self, ctx):
     """Verify yourself to gain access to the server."""
