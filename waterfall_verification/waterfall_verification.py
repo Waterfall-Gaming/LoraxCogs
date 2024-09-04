@@ -568,8 +568,15 @@ class WaterfallVerification(commands.Cog):
 
     verification_embed.set_footer(text=ctx.guild.name, icon_url=ctx.guild.icon.url)
 
-    await ctx.author.send(embed=verification_embed)
-    await ctx.message.delete(delay=5.0)
+    try:
+      await ctx.author.send(embed=verification_embed)
+    except discord.errors.Forbidden:
+      error_message = await ctx.send(embed=self._error_embed(
+        "Couldn't send you a verification code in DMs. Please make sure you have DMs from server members enabled."
+      ))
+      await error_message.delete(delay=10.0)
+    finally:
+      await ctx.message.delete(delay=5.0)
 
   @commands.command(name="verifyinfo")
   async def command_verifyinfo(self, ctx, user: discord.Member = None):
