@@ -5,7 +5,7 @@ import string
 import random
 
 import discord
-from redbot.core import Config, commands
+from redbot.core import Config, commands, modlog
 from redbot.core.commands.requires import PrivilegeLevel
 
 
@@ -42,6 +42,40 @@ class WaterfallVerification(commands.Cog):
     self.config.register_global(**self.default_global_settings)
     self.config.register_member(**self.default_member_settings)
     self.config.register_user(**self.default_user_settings)
+
+  async def cog_load(self):
+    await self.register_casetypes()
+
+  @staticmethod
+  async def register_casetypes():
+    case_types = [
+      {
+        "name": "verify",
+        "default_setting": True,
+        "case_str": "Verify",
+        "image": "<:verified:1280846920784547953>"
+      },
+      {
+        "name": "unverify",
+        "default_setting": True,
+        "case_str": "Unverify",
+        "image": ":x:"
+      },
+      {
+        "name": "bypassverify",
+        "default_setting": True,
+        "case_str": "Bypassed Verification",
+        "image": "<:verified_gold:1280846966716370995>"
+      },
+      {
+        "name": "syncverify",
+        "default_setting": True,
+        "case_str": "Synced Verification Status",
+        "image": ":arrows_counterclockwise:"
+      }
+    ]
+
+    await modlog.register_casetypes(case_types)
 
   async def _verify_user(self, ctx, user: discord.Member, ignore_errors=False):
     """Verify a user. (internal function)"""
@@ -264,6 +298,11 @@ class WaterfallVerification(commands.Cog):
       color=discord.Color.dark_red()
     )
 
+    case = await modlog.create_case(
+      ctx.bot, ctx.guild, ctx.message.created_at, action_type="unverify",
+      user=user, moderator=ctx.author, reason="Unverified by an administrator."
+    )
+
     await ctx.send(embed=info_embed)
 
   @command_unverify.command(name="inactive")
@@ -361,6 +400,10 @@ class WaterfallVerification(commands.Cog):
           # skip the user if they have a role that allows them to bypass verification
           continue
 
+        if ctx.guild.owner_id == member.id:
+          # skip the server owner
+          continue
+
         if verified:
           # give the user the verified role and remove the unverified role
           await member.add_roles(verified_role)
@@ -404,6 +447,11 @@ class WaterfallVerification(commands.Cog):
       color=discord.Color.dark_gold()
     )
 
+    case = await modlog.create_case(
+      ctx.bot, ctx.guild, ctx.message.created_at, action_type="syncverify",
+      user=user, moderator=ctx.author, reason="Verification status synced by an administrator."
+    )
+
     await ctx.send(embed=info_embed)
 
   @commands.command(name="bypassverify")
@@ -423,6 +471,11 @@ class WaterfallVerification(commands.Cog):
       title="Verification Bypassed",
       description=f"{user.mention} has been manually verified.",
       color=discord.Color.gold()
+    )
+
+    case = await modlog.create_case(
+      ctx.bot, ctx.guild, ctx.message.created_at, action_type="bypassverify",
+      user=user, moderator=ctx.author, reason="Manually verified by an administrator."
     )
 
     await ctx.send(embed=info_embed)
@@ -540,10 +593,10 @@ class WaterfallVerification(commands.Cog):
 
     bypass = any(role.id in ignore_roles for role in user_roles)
 
-    if verified:
-      status = ":heavy_check_mark: Verified"
-    elif bypass:
-      status = ":information_source: Bypasses Verification"
+    if bypass:
+      status = " <:verified_gold:1280846966716370995> Bypasses Verification"
+    elif verified:
+      status = "<:verified:1280846920784547953> Verified"
     else:
       status = ":x: Unverified"
 
@@ -624,6 +677,11 @@ class WaterfallVerification(commands.Cog):
           color=discord.Color.green()
         ),
           mention_author=True
+        )
+
+        case = await modlog.create_case(
+          self.bot, message.guild, message.created_at, action_type="verify",
+          user=author, moderator=self.bot.user, reason="Verified through the verification channel."
         )
 
         # delete the verification message after a few seconds
