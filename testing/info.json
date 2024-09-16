@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+  "author": [
+    "EvilSquirrelGuy (@evilsquirrelguy)"
+  ],
+  "name": "Waterfall Testing",
+  "description": "A cog that implements a verification system for Waterfall Gaming.",
+  "install_msg": "Make sure to play genshin impact when evil asks you to :)",
+  "short": "Verification for Waterfall Gaming",
+  "type": "COG",
+  "end_user_data_statement": "This cog does not store any user data.",
+  "hidden": true,
+  "disabled": false,
+  "min_bot_version": "3.5.0"
+}

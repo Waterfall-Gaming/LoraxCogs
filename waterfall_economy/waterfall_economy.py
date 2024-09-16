@@ -59,66 +59,23 @@ class WaterfallEconomy(commands.Cog):
     self.config.register_role(**self.default_role_settings)
     self.config.register_user(**self.default_user_settings)
 
-  @commands.group(name="econset")
-  @commands.admin()
-  async def command_econset(self, ctx):
-    """Set Waterfall Economy settings"""
-    pass
-
-  @command_econset.group(name="steal")
-  async def command_econset_steal(self, ctx):
-    """Set steal settings"""
-    pass
-
-  @command_econset_steal.command(name="rate")
-  async def command_econset_steal_rate(self, ctx, rate: int):
-    """Set the success rate for the steal command"""
-    if rate < 0 or rate > 100:
-      await ctx.send("The steal rate must be between 0 and 100!")
-      return
-
-    await self.config.STEAL_SUCCESS_RATE.set(rate)
-    await ctx.send(f"The steal success rate has been set to {rate}%!")
-
-  @command_econset_steal.command(name="cooldown")
-  async def command_econset_steal_cooldown(self, ctx, cooldown: TimedeltaConverter):
-    """Set the cooldown for the steal command"""
-    await self.config.STEAL_COOLDOWN.set(cooldown.total_seconds())
-    await ctx.send(f"The steal cooldown has been set to {cooldown}!")
-
-  @command_econset_steal.command(name="max")
-  async def command_econset_steal_max(self, ctx, max: int):
-    """Set the maximum amount that can be stolen"""
-    if max < 1:
-      await ctx.send("The maximum amount that can be stolen must be at least 1!")
-      return
-    await self.config.STEAL_MAX.set(max)
-    await ctx.send(f"The maximum amount that can be stolen has been set to {humanize_number(max)}!")
-
-  @command_econset_steal.command(name="immunity")
-  async def command_econset_steal_immunity(self, ctx, immunity: TimedeltaConverter):
-    """Set the immunity duration for the steal command"""
-    await self.config.STEAL_IMMUNITY.set(immunity.total_seconds())
-    await ctx.send(f"The steal immunity duration has been set to {immunity}!")
-
-
-  @commands.command()
+  @commands.command(name="steal")
   @guild_only()
-  async def steal(self, ctx, target: str, amount: int):
+  async def command_steal(self, ctx, target: discord.Member, amount: int):
     """Attempt to rob a user for a specified amount of credits"""
     author = ctx.author
     guild = ctx.guild
 
     currency = await bank.get_currency_name(guild)
-    target = await commands.MemberConverter().convert(ctx, target)
+    # target = await commands.MemberConverter().convert(ctx, target)
     steal_rate = await self.config.STEAL_SUCCESS_RATE()
     steal_immunity = await self.config.STEAL_IMMUNITY()
     steal_cooldown = await self.config.STEAL_COOLDOWN()
 
     cur_time = calendar.timegm(ctx.message.created_at.utctimetuple())
-    next_steal = await self.config.user(author).steal_cooldown() + steal_cooldown
-    author_steal_immune = await self.config.user(author).steal_immunity() + steal_immunity
-    target_steal_immune = await self.config.user(target).steal_immunity() + steal_immunity
+    next_steal = await self.config.member(author).steal_cooldown() + steal_cooldown
+    author_steal_immune = await self.config.member(author).steal_immunity() + steal_immunity
+    target_steal_immune = await self.config.member(target).steal_immunity() + steal_immunity
 
     # check if the user is on cooldown
     if cur_time < next_steal:
@@ -187,17 +144,14 @@ class WaterfallEconomy(commands.Cog):
 
   @commands.command()
   @commands.admin()
-  async def csc(self, ctx, target: str):
-    """Clear the cooldown for a user's steal command"""
-    target = await commands.MemberConverter().convert(ctx, target)
-    await self.config.user(target).steal_cooldown.set(0)
-    await ctx.send(f"{target.mention}'s steal cooldown has been reset!")
+  async def csc(self, ctx, target: discord.Member):
+
 
   @commands.command()
   @commands.admin()
-  async def csi(self, ctx, target: str):
+  async def csi(self, ctx, target: discord.Member):
     """Clear the immunity for a user's steal command"""
-    target = await commands.MemberConverter().convert(ctx, target)
-    await self.config.user(target).steal_immunity.set(0)
+    # target = await commands.MemberConverter().convert(ctx, target)
+    await self.config.member(target).steal_immunity.set(0)
     await ctx.send(f"{target.mention}'s steal immunity has been reset!")
 
