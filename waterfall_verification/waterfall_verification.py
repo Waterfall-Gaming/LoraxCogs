@@ -6,6 +6,7 @@ import random
 
 import discord
 from redbot.core import Config, commands, modlog
+from redbot.core.commands.converter import TimedeltaConverter
 from redbot.core.commands.requires import PrivilegeLevel
 
 
@@ -202,20 +203,23 @@ class WaterfallVerification(commands.Cog):
     await ctx.send(f"Verification codes will now be {code_type}.")
 
   @command_verifyset_code.command(name="expiry")
-  async def command_verifyset_code_expiry(self, ctx, expiry: int):
+  async def command_verifyset_code_expiry(self, ctx, expiry: TimedeltaConverter):
     """Set the expiry time for verification codes (in seconds)."""
-    if expiry < 60 and expiry != 0:
+
+    expiry_seconds = expiry.total_seconds()
+
+    if expiry_seconds < 60 and expiry_seconds != 0:
       await ctx.send(embed=self._error_embed(
         "The expiry time for verification codes must be at least 60 seconds. (or 0 to disable expiry)"))
       return
 
-    if expiry > 86400:
+    if expiry_seconds > 86400:
       await ctx.send(
         embed=self._error_embed("The expiry time for verification codes must be less than 86400 seconds (24 hours)."))
       return
 
     await self.config.guild(ctx.guild).VERIFICATION_CODE_EXPIRY.set(expiry)
-    if expiry == 0:
+    if expiry_seconds == 0:
       await ctx.send("Verification codes will no longer expire.")
     else:
       await ctx.send(f"Verification codes will now expire after {expiry} seconds.")
