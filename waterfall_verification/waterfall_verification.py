@@ -700,11 +700,14 @@ class WaterfallVerification(commands.Cog):
         await message.delete(delay=7.5)
 
   @commands.Cog.listener(name="on_member_join")
-  async def unverifed_role_new_members(self, member):
+  async def unverifed_role_new_members(self, member: discord.Member):
     """Give new members the unverified role when they join the server."""
-    if await self.config.member(member).verified():
-      await member.add_role(member.guild.get_role(await self.config.guild(member.guild).VERIFICATION_ROLE()))
+    guild = member.guild
+    verified = await self.config.member(member)
+
+    if verified:
+      await member.add_roles(member.guild.get_role(await self.config.guild(member.guild).VERIFICATION_ROLE()))
       return
 
-    if await self.config.guild(member.guild).UNVERIFIED_ROLE() is not None:
+    if await self.config.guild(guild).UNVERIFIED_ROLE() is not None:
       await member.add_roles(member.guild.get_role(await self.config.guild(member.guild).UNVERIFIED_ROLE()))
