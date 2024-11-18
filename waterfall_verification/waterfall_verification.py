@@ -706,8 +706,8 @@ class WaterfallVerification(commands.Cog):
     verified = await self.config.member(member).verified()
 
     if verified:
-      await member.add_role(member.guild.get_role(await self.config.guild(member.guild).VERIFICATION_ROLE()))
+      await member.add_roles(guild.get_role(await self.config.guild(guild).VERIFICATION_ROLE()))
       return
 
     if await self.config.guild(guild).UNVERIFIED_ROLE() is not None:
-      await member.add_role(member.guild.get_role(await self.config.guild(member.guild).UNVERIFIED_ROLE()))
+      await member.add_roles(guild.get_role(await self.config.guild(guild).UNVERIFIED_ROLE()))
