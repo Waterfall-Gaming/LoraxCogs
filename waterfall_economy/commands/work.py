@@ -94,7 +94,7 @@ class WorkCommand(commands.Cog):
       if next_tier:
         embed.add_field(
           name="Promotion",
-          value=f"Promotion in {tier['times_worked'] - times_worked} shifts",
+          value=f"Promotion in {next_tier['times_worked'] - times_worked} shifts",
           inline=True
         )
       else:
@@ -116,10 +116,10 @@ class WorkCommand(commands.Cog):
       await ctx.send(embed=ErrorEmbed("You do not have a job!"))
 
   @command_work.command(name="apply")
-  async def command_work_apply(self, ctx, job: str):
+  async def command_work_apply(self, ctx, job_name: str):
     """Apply for a job"""
     jobs = await self.config.JOBS()
-    job = jobs.get(job)
+    job = jobs.get(job_name)
 
     if not job:
       await ctx.send(embed=ErrorEmbed("That job does not exist!"))
@@ -147,7 +147,7 @@ class WorkCommand(commands.Cog):
 
     currency = await bank.get_currency_name(ctx.guild)
 
-    await self.config.member(ctx.author).job.set(job)
+    await self.config.member(ctx.author).job.set(job_name)
     await self.config.member(ctx.author).job_tier.set(0)
     await self.config.member(ctx.author).job_times_worked.set(0)
 
@@ -190,6 +190,19 @@ class WorkCommand(commands.Cog):
   @commands.admin()
   async def command_work_fire(self, ctx, member: discord.Member):
     """Fire a member from their job"""
+    job = await self.config.member(member).job()
+    if not job:
+      await ctx.send(embed=ErrorEmbed("That user does not have a job!"))
+      return
+
+    await self.config.member(member).job.set(None)
+    await self.config.member(member).job_tier.set(0)
+    await self.config.member(member).job_times_worked.set(0)
+
+    await ctx.send(embed=discord.Embed(
+        title="User Fired",
+        description=f"{member.mention} has been fired from their job at {job['name']}!",
+    ))
 
   @command_work.command(name="cooldown")
   async def command_work_cooldown(self, ctx):
