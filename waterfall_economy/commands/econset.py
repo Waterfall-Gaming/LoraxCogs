@@ -73,12 +73,12 @@ class EconomySettingsCommand(commands.Cog):
     await ctx.send(embed=SettingChangedEmbed("Steal Immunity Duration", str(immunity)))
 
   @command_econset_steal.group(name="clear")
-  async def command_econset_steal_clear(self):
+  async def command_econset_steal_clear(self, ctx):
     """Clear steal cooldowns and immunities"""
     pass
 
   @command_econset_steal_clear.group(name="cooldown")
-  async def command_econset_steal_clear_cooldown(self):
+  async def command_econset_steal_clear_cooldown(self, ctx):
     """Clear steal cooldown."""
     pass
 
@@ -107,7 +107,7 @@ class EconomySettingsCommand(commands.Cog):
     ))
 
   @command_econset_steal_clear.group(name="immunity")
-  async def command_econset_steal_clear_immunity(self):
+  async def command_econset_steal_clear_immunity(self, ctx):
     """Clear steal immunity."""
     pass
 
@@ -153,7 +153,7 @@ class EconomySettingsCommand(commands.Cog):
     await ctx.send(embed=SettingChangedEmbed("Job Application Cooldown", str(cooldown)))
 
   @command_econset_work.group(name="clearcooldown")
-  async def command_econset_work_clearcooldown(self):
+  async def command_econset_work_clearcooldown(self, ctx):
     """Clear work cooldown."""
     pass
 
