@@ -252,6 +252,6 @@ class WorkCommand(commands.Cog):
       await self.config.member(ctx.author).job_tier.set(await self.config.member(ctx.author).job_tier() + 1)
       message += f"\nYou have been promoted to {next_tier['name']}! Your new rate is {humanize_number(next_tier['rate'])} {currency}/hour"
 
-    bank.deposit_credits(ctx.author, earnings)
+    await bank.deposit_credits(ctx.author, earnings)
 
     await ctx.send(message)
