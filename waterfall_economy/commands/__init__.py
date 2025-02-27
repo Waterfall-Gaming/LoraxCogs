@@ -7,7 +7,7 @@ from .work import WorkCommand
 class EconomyCommands(
   EconomySettingsCommand,
   StealCommand,
-  WorkCommand
+  WorkCommand,
 ):
   def __init__(self, bot):
     super().__init__(bot)

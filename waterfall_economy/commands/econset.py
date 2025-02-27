@@ -25,7 +25,7 @@ class EconomySettingsCommand(commands.Cog):
   All the economy configuration subcommands
   """
 
-  def __init___(self, bot):
+  def __init__(self, bot):
     """Initialise the cog."""
     super().__init__()
     self.bot = bot
