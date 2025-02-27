@@ -160,11 +160,21 @@ class EconomySettingsCommand(commands.Cog):
     pass
 
   @command_econset_work_clearcooldown.command(name="user")
-  async def command_econset_work_clearcooldown_user(self, ctx, target: discord.Member):
+  async def command_econset_work_clearcooldown_user(self, ctx, target: discord.Member, cd_type: str = "work"):
     """Clear the cooldown for a user's work command"""
-    await self.config.member(target).job_last_worked.set(0)
+    if cd_type == "work":
+      await self.config.member(target).job_last_worked.set(0)
+    elif cd_type == "apply":
+      await self.config.member(target).job_last_quit.set(0)
+    elif cd_type == "all":
+      await self.config.member(target).job_last_worked.set(0)
+      await self.config.member(target).job_last_quit.set(0)
+    else:
+      await ctx.send(embed=ErrorEmbed("Invalid cooldown type!"))
+      return
+
     await ctx.send(embed=AdminEmbed(
-      message=f"{target.mention}'s work cooldown has been reset!",
+      message=f"{target.mention}'s {'work' if cd_type != 'apply' else 'job application'} {'cooldowns have' if cd_type == 'all' else 'cooldown has'} has been reset!",
       author=ctx.author,
       title="Work Cooldown Reset"
     ))

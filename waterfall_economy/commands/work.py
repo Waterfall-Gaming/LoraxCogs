@@ -53,7 +53,7 @@ class WorkCommand(commands.Cog):
     job = jobs.get(job)
 
     if not job:
-      await ctx.send(ErrorEmbed("That job does not exist!"))
+      await ctx.send(embed=ErrorEmbed("That job does not exist!"))
       return
     else:
       currency = await bank.get_currency_name(ctx.guild)
@@ -113,7 +113,7 @@ class WorkCommand(commands.Cog):
 
       await ctx.send(embed=embed)
     else:
-      await ctx.send(ErrorEmbed("You do not have a job!"))
+      await ctx.send(embed=ErrorEmbed("You do not have a job!"))
 
   @command_work.command(name="apply")
   async def command_work_apply(self, ctx, job: str):
@@ -122,12 +122,12 @@ class WorkCommand(commands.Cog):
     job = jobs.get(job)
 
     if not job:
-      await ctx.send(ErrorEmbed("That job does not exist!"))
+      await ctx.send(embed=ErrorEmbed("That job does not exist!"))
       return
 
     current_job = await self.config.member(ctx.author).job()
     if current_job:
-      await ctx.send(ErrorEmbed("You already have a job!"))
+      await ctx.send(embed=ErrorEmbed("You already have a job!"))
       return
 
     job_cooldown = await self.config.JOB_APPLY_COOLDOWN()
@@ -142,7 +142,7 @@ class WorkCommand(commands.Cog):
       return
 
     if job['min_times_worked'] > await self.config.member(ctx.author).job_global_times_worked():
-      await ctx.send(ErrorEmbed("You do not meet the requirements for this job!"))
+      await ctx.send(embed=ErrorEmbed("You do not meet the requirements for this job!"))
       return
 
     currency = await bank.get_currency_name(ctx.guild)
@@ -162,7 +162,7 @@ class WorkCommand(commands.Cog):
     """Quit your current job. Warning, you will not be able to apply for a job for a while!"""
     job = await self.config.member(ctx.author).job()
     if not job:
-      await ctx.send(ErrorEmbed("You do not have a job!"))
+      await ctx.send(embed=ErrorEmbed("You do not have a job!"))
       return
 
     job_cooldown = await self.config.JOB_APPLY_COOLDOWN()
@@ -196,7 +196,7 @@ class WorkCommand(commands.Cog):
     """Check how long until you can work again"""
     job = await self.config.member(ctx.author).job()
     if not job:
-      await ctx.send(ErrorEmbed("You do not have a job!"))
+      await ctx.send(embed=ErrorEmbed("You do not have a job!"))
       return
 
     job_cooldown = await self.config.JOB_COOLDOWN()
@@ -216,12 +216,12 @@ class WorkCommand(commands.Cog):
     """Work a shift"""
     job = await self.config.member(ctx.author).job()
     if not job:
-      await ctx.send(ErrorEmbed("You do not have a job!"))
+      await ctx.send(embed=ErrorEmbed("You do not have a job!"))
       return
 
     job = await self.config.JOBS.get(job)
-    tier = await self.config.member(ctx.author).job_tier()
-    tier = job['tiers'][tier]
+    tier_int = await self.config.member(ctx.author).job_tier()
+    tier = job['tiers'][tier_int]
 
     job_cooldown = await self.config.JOB_COOLDOWN()
     last_worked = await self.config.member(ctx.author).job_last_worked()
@@ -246,8 +246,12 @@ class WorkCommand(commands.Cog):
 
     message = f"You have worked a {hours} hour shift at {job['name']} and earned {humanize_number(earnings)} {currency}!"
 
-    next_tier = job['tiers'][tier + 1] if tier + 1 < len(job['tiers']) else None
+    next_tier = job['tiers'][tier_int + 1] if tier_int + 1 < len(job['tiers']) else None
 
     if next_tier and await self.config.member(ctx.author).job_times_worked() >= next_tier['times_worked']:
       await self.config.member(ctx.author).job_tier.set(await self.config.member(ctx.author).job_tier() + 1)
       message += f"\nYou have been promoted to {next_tier['name']}! Your new rate is {humanize_number(next_tier['rate'])} {currency}/hour"
+
+    bank.deposit_credits(ctx.author, earnings)
+
+    await ctx.send(message)
