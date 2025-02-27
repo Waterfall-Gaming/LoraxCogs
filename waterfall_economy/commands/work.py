@@ -14,7 +14,7 @@ class WorkCommand(commands.Cog):
   """The work command"""
 
   def __init__(self, bot):
-    super().__init__(bot)
+    super().__init__()
     self.bot = bot
     self.config = None
 

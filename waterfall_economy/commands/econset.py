@@ -27,6 +27,7 @@ class EconomySettingsCommand(commands.Cog):
 
   def __init___(self, bot):
     """Initialise the cog."""
+    super().__init__()
     self.bot = bot
     self.config = None  # make the config field, but it gets overridden so it's fine
 
