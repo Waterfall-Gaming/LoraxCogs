@@ -12,7 +12,7 @@ class StealCommand(commands.Cog):
   """The steal command"""
 
   def __init__(self, bot):
-    super().__init__()
+    # super().__init__()
     self.bot = bot
     self.config = None
 

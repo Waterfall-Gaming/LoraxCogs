@@ -14,7 +14,7 @@ class WorkCommand(commands.Cog):
   """The work command"""
 
   def __init__(self, bot):
-    super().__init__()
+    # super().__init__()
     self.bot = bot
     self.config = None
 
@@ -38,10 +38,12 @@ class WorkCommand(commands.Cog):
         name=f"{jobs[job]['emoji']} {jobs[job]['name']} {'(Current Job)' if current_job and current_job == job else ''}",
         value=f"{jobs[job]['description']}\n"
               f"ID: `{job}`\n"
-              f"Times worked required: {job['min_times_worked']} {':heavy_check_mark:' if global_times_worked >= job['min_times_worked'] else ':x:'}\n"
-              f"Starting rate: {humanize_number(job['tiers'][0]['rate'])} {currency}/hour",
+              f"Times worked required: {jobs[job]['min_times_worked']} {':heavy_check_mark:' if global_times_worked >= jobs[job]['min_times_worked'] else ':x:'}\n"
+              f"Starting rate: {humanize_number(jobs[job]['tiers'][0]['rate'])} {currency}/hour",
         inline=False
       )
+
+    await ctx.send(embed=embed)
 
 
   @command_work.command(name="info", aliases=["details"])

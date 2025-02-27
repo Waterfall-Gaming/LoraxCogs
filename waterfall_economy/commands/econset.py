@@ -15,6 +15,7 @@ import discord
 import calendar
 import yaml
 import io
+import pprint
 import datetime as dt
 
 from random import randint, randrange
@@ -27,7 +28,7 @@ class EconomySettingsCommand(commands.Cog):
 
   def __init__(self, bot):
     """Initialise the cog."""
-    super().__init__()
+    # super().__init__()
     self.bot = bot
     self.config = None  # make the config field, but it gets overridden so it's fine
 
@@ -340,14 +341,14 @@ class EconomySettingsCommand(commands.Cog):
 
     await self.config.JOBS.set(jobs)
 
-    await ctx.send(embed=SettingChangedEmbed("Jobs Imported", f"```py\n{str(jobs)[:256]}...\n```"))
+    await ctx.send(embed=SettingChangedEmbed("Jobs Imported", f"``py\n{pprint.pformat(jobs)[:256]}...\n``"))
 
   @command_econset_work_jobs.command(name="export", aliases=["dump", "save"])
-  async def command_econset_work_jobs_export(self, ctx):
+  async def command_econset_work_jobs_export(self, ctx, to_file: bool = False):
     """Export jobs as YAML"""
     jobs = await self.config.JOBS()
     data = yaml.dump(jobs)
-    if len(data) + 12 > 2000:
+    if len(data) + 12 > 2000 or to_file:
       yaml_file = io.BytesIO(data.encode("utf-8"))
       await ctx.send(file=discord.File(yaml_file, filename=f"jobs_{ctx.guild.id}_{dt.datetime.now().strftime('%Y%m%d')}.yaml"))
     else:
