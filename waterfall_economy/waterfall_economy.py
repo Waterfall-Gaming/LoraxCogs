@@ -73,7 +73,7 @@ class WaterfallEconomy(
   default_user_settings = default_member_settings
 
   def __init__(self, bot):
-    super().__init__()
+    super().__init__(bot)
     self.bot = bot
 
     self.config = Config.get_conf(self, 0x77672e65636f6e6f6d79)  # wg.economy
