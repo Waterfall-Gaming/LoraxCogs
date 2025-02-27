@@ -232,7 +232,7 @@ class WorkCommand(commands.Cog):
       await ctx.send(embed=ErrorEmbed("You do not have a job!"))
       return
 
-    jobs = await self.config.JOBS
+    jobs = await self.config.JOBS()
     job = jobs.get(job_name)
     tier_int = await self.config.member(ctx.author).job_tier()
     tier = job['tiers'][tier_int]
