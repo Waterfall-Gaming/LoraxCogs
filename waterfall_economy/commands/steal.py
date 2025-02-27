@@ -16,7 +16,7 @@ class StealCommand(commands.Cog):
     self.bot = bot
     self.config = None
 
-  @commands.command(name="steal")
+  @commands.command(name="steal", aliases=["rob"])
   @commands.guild_only()
   async def command_steal(self, ctx, target: discord.Member, amount: int):
     """Attempt to rob a user for a specified amount of credits"""
@@ -71,12 +71,11 @@ class StealCommand(commands.Cog):
         await self.bot.wait_for("message", check=lambda m: m.author == author and m.content.lower() == "yes", timeout=10)
       except TimeoutError:
         return
-      else:
-        await ctx.send(f"You are no longer immune to being robbed!")
-        await self.config.user(author).steal_immunity.set(0)
+      await ctx.send(f"You are no longer immune to being robbed!")
+      await self.config.user(author).steal_immunity.set(0)
 
     if amount < 1:
-      await ctx.send(f"You can't steal less than 1 {currency}!")
+      await ctx.send(f"You can't steal less than {humanize_number(await self.config.STEAL_MIN())} {currency}!")
       return
 
     if amount > await self.config.STEAL_MAX():
@@ -88,12 +87,12 @@ class StealCommand(commands.Cog):
         if randint(1, 100) <= steal_rate:
           await bank.transfer_credits(target, ctx.author, amount)
           await ctx.send(f"You successfully stole {humanize_number(amount)} {currency} from {target.mention}!")
-          await self.config.user(target).steal_immunity.set(cur_time)
+          await self.config.member(target).steal_immunity.set(cur_time)
         else:
           await bank.transfer_credits(ctx.author, target, amount//2)
           await ctx.send(f"You failed to rob {target.mention} and lost {humanize_number(amount//2)} {currency}!")
 
-        await self.config.user(author).steal_cooldown.set(cur_time)
+        await self.config.member(author).steal_cooldown.set(cur_time)
       else:
         await ctx.send(f"{target.mention} doesn't have enough {currency} for you to steal that much!")
     else:

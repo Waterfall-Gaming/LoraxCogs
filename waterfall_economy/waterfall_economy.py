@@ -31,19 +31,37 @@ class WaterfallEconomy(
   """Waterfall Custom Economy cog, featuring jobs, gambling, and more!"""
 
   default_guild_settings = {
-    "JOB_COOLDOWN": 43_200,
     "STEAL_COOLDOWN": 14_400,
+    "STEAL_MIN": 1,
     "STEAL_MAX": 10_000,
     "STEAL_IMMUNITY": 86_400,
-    "STEAL_SUCCESS_RATE": 50
+    "STEAL_SUCCESS_RATE": 50,
+    "JOB_COOLDOWN": 43_200, # 12h
+    "JOB_APPLY_COOLDOWN": 86_400, # 24h
+    "JOBS": {
+      "wcdonalds": {
+        "name": "WcDonald's",
+        "description": "Work at WcDonald's to earn credits!",
+        "emoji": "🍔",
+        "min_times_worked": 0,
+        "tiers": [
+          {"name": "Cashier", "rate": 100, "min_hours": 4, "max_hours": 8, "times_worked": 0},
+          {"name": "Cook", "rate": 150, "min_hours": 6, "max_hours": 8, "times_worked": 8},
+          {"name": "Manager", "rate": 200, "min_hours": 8, "max_hours": 10, "times_worked": 16},
+        ],
+      },
+    }
   }
 
   default_global_settings = default_guild_settings
 
   default_member_settings = {
-    "job_cooldown": 0,
+    "job_last_worked": 0,
     "job": None,
+    "job_tier": 0,
     "job_times_worked": 0,
+    "job_global_times_worked": 0,
+    "job_last_quit": 0,
     "steal_cooldown": 0,
     "steal_immunity": 0
   }
