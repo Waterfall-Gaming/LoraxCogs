@@ -73,15 +73,15 @@ class WorkCommand(commands.Cog):
   async def command_work_status(self, ctx):
     """Check your current job status"""
     job = await self.config.member(ctx.author).job()
-    tier = await self.config.member(ctx.author).job_tier()
+    tier_num = await self.config.member(ctx.author).job_tier()
     times_worked = await self.config.member(ctx.author).job_times_worked()
     global_times_worked = await self.config.member(ctx.author).job_global_times_worked()
 
     if job:
       jobs = await self.config.JOBS()
       job = jobs.get(job)
-      tier = job['tiers'][tier]
-      next_tier = job['tiers'][tier + 1] if tier + 1 < len(job['tiers']) else None
+      tier = job['tiers'][tier_num]
+      next_tier = job['tiers'][tier_num + 1] if tier_num + 1 < len(job['tiers']) else None
       currency = await bank.get_currency_name(ctx.guild)
 
       embed = discord.Embed(title=f"{job['emoji']} {job['name']} - {tier['name']}")
