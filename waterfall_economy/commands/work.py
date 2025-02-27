@@ -227,12 +227,13 @@ class WorkCommand(commands.Cog):
   @command_work.command(name="shift", aliases=["work"])
   async def command_work_shift(self, ctx):
     """Work a shift"""
-    job = await self.config.member(ctx.author).job()
-    if not job:
+    job_name = await self.config.member(ctx.author).job()
+    if not job_name:
       await ctx.send(embed=ErrorEmbed("You do not have a job!"))
       return
 
-    job = await self.config.JOBS.get(job)
+    jobs = await self.config.JOBS
+    job = jobs.get(job_name)
     tier_int = await self.config.member(ctx.author).job_tier()
     tier = job['tiers'][tier_int]
 
