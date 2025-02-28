@@ -211,7 +211,7 @@ class EconomySettingsCommand(commands.Cog):
       await ctx.send(embed=ErrorEmbed("Invalid cooldown type!"))
       return
 
-    await ctx.send(embed=discord.Embed(
+    await ctx.send(embed=AdminEmbed(
       message=f"{target.mention}'s {'work' if cd_type != 'apply' else 'job application'} {'cooldowns have' if cd_type == 'all' else 'cooldown has'} has been reset!",
       author=ctx.author,
       title="Work Cooldown Reset",

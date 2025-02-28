@@ -58,7 +58,7 @@ class StealCommand(commands.Cog):
       return
 
     # check if the author is immune to robbing, and warn them that this will expire if they attempt to rob someone
-    if cur_time < target_steal_immune:
+    if cur_time < author_steal_immune:
       relative_time = discord.utils.format_dt(
         datetime.now(timezone.utc) + timedelta(seconds=author_steal_immune - cur_time), "R"
       )
@@ -74,7 +74,7 @@ class StealCommand(commands.Cog):
       await ctx.send(f"You are no longer immune to being robbed!")
       await self.config.user(author).steal_immunity.set(0)
 
-    if amount < 1:
+    if amount < await self.config.STEAL_MIN():
       await ctx.send(f"You can't steal less than {humanize_number(await self.config.STEAL_MIN())} {currency}!")
       return
 
