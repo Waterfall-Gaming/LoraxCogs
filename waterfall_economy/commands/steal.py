@@ -1,3 +1,5 @@
+from encodings.aliases import aliases
+
 from redbot.core import Config, commands, app_commands, bank
 from redbot.core.utils.chat_formatting import humanize_number
 
@@ -102,7 +104,7 @@ class StealCommand(commands.Cog):
   async def command_stealinfo(self, ctx):
     """Get information about your steal cooldown and immunity"""
 
-  @command_stealinfo.command(name="cooldown")
+  @command_stealinfo.command(name="cooldown", aliases=["cd"])
   async def command_steal_cooldown(self, ctx, target: discord.Member = None):
     """Check your current steal cooldown"""
     if not target:
@@ -118,7 +120,7 @@ class StealCommand(commands.Cog):
     else:
       await ctx.send(f"{target.mention} not on cooldown!")
 
-  @command_stealinfo.command(name="immunity")
+  @command_stealinfo.command(name="immunity", aliases=["immune"])
   async def command_steal_immunity(self, ctx, target: discord.Member = None):
     """Check your current steal immunity"""
     if not target:
@@ -126,9 +128,10 @@ class StealCommand(commands.Cog):
 
     cur_time = calendar.timegm(ctx.message.created_at.utctimetuple())
     immunity = await self.config.member(target).steal_immunity()
-    if cur_time < immunity:
+    immune_duration = await self.config.STEAL_IMMUNITY()
+    if cur_time < immunity + immune_duration:
       relative_time = discord.utils.format_dt(
-        datetime.now(timezone.utc) + timedelta(seconds=immunity - cur_time), "R"
+        datetime.now(timezone.utc) + timedelta(seconds=(immunity+immune_duration) - cur_time), "R"
       )
       await ctx.send(f"{target.mention} is currently immune to being robbed!\n This immunity will expire {relative_time}!")
     else:
