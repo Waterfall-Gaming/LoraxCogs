@@ -30,7 +30,7 @@ class AdminEmbed(Embed):
     super().__init__(title=title, description=message, colour=colour, timestamp=timestamp)
 
     if author:
-      self.set_footer(text=f"Action performed by **{author.display_name}**", icon_url=author.avatar.url)
+      self.set_footer(text=f"Action performed by {author.display_name}", icon_url=author.avatar.url)
 
 
 class SettingChangedEmbed(Embed):

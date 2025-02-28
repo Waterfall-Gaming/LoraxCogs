@@ -43,6 +43,22 @@ class EconomySettingsCommand(commands.Cog):
     """Set steal settings"""
     pass
 
+  @command_econset_steal.command(name="showsettings")
+  async def command_econset_steal_showsettings(self, ctx):
+    """Show the steal settings"""
+    steal_rate = await self.config.STEAL_SUCCESS_RATE()
+    steal_immunity = await self.config.STEAL_IMMUNITY()
+    steal_cooldown = await self.config.STEAL_COOLDOWN()
+    steal_min = await self.config.STEAL_MIN()
+    steal_max = await self.config.STEAL_MAX()
+
+    await ctx.send(embed=discord.Embed(
+      message=f"Steal Success Rate: {steal_rate}%\nSteal Immunity Duration: {steal_immunity} seconds\nSteal Cooldown: {steal_cooldown} seconds\nMin Steal Amount: {humanize_number(steal_min)}\nMax Steal Amount: {humanize_number(steal_max)}",
+      author=ctx.author,
+      title="Steal Settings",
+      colour=discord.Colour.gold()
+    ))
+
   @command_econset_steal.command(name="rate")
   async def command_econset_steal_rate(self, ctx, rate: int):
     """Set the success rate for the steal command"""
@@ -58,6 +74,15 @@ class EconomySettingsCommand(commands.Cog):
     """Set the cooldown for the steal command"""
     await self.config.STEAL_COOLDOWN.set(cooldown.total_seconds())
     await ctx.send(embed=SettingChangedEmbed("Steal Cooldown", str(cooldown)))
+
+  @command_econset_steal.command(name="min")
+  async def command_econset_steal_min(self, ctx, min_amount: int):
+    """Set the minimum amount that can be stolen"""
+    if min_amount < 1:
+      await ctx.send(embed=ErrorEmbed("The minimum amount that can be stolen must be at least 1!"))
+      return
+    await self.config.STEAL_MIN.set(min_amount)
+    await ctx.send(embed=SettingChangedEmbed("Min Steal Amount", humanize_number(min_amount)))
 
   @command_econset_steal.command(name="max")
   async def command_econset_steal_max(self, ctx, max_amount: int):
@@ -142,6 +167,19 @@ class EconomySettingsCommand(commands.Cog):
     """Set work settings"""
     pass
 
+  @command_econset_work.command(name="showsettings")
+  async def command_econset_work_showsettings(self, ctx):
+    """Show the work settings"""
+    job_cooldown = await self.config.JOB_COOLDOWN()
+    job_apply_cooldown = await self.config.JOB_APPLY_COOLDOWN()
+    job_count = len(await self.config.JOBS())
+
+    await ctx.send(embed=AdminEmbed(
+      message=f"Work Cooldown: {job_cooldown} seconds\nJob Application Cooldown: {job_apply_cooldown} seconds\nJobs: {job_count}",
+      author=ctx.author,
+      title="Work Settings"
+    ))
+
   @command_econset_work.command(name="cooldown")
   async def command_econset_work_cooldown(self, ctx, cooldown: TimedeltaConverter):
     """Set the cooldown for the work command"""
@@ -173,10 +211,11 @@ class EconomySettingsCommand(commands.Cog):
       await ctx.send(embed=ErrorEmbed("Invalid cooldown type!"))
       return
 
-    await ctx.send(embed=AdminEmbed(
+    await ctx.send(embed=discord.Embed(
       message=f"{target.mention}'s {'work' if cd_type != 'apply' else 'job application'} {'cooldowns have' if cd_type == 'all' else 'cooldown has'} has been reset!",
       author=ctx.author,
-      title="Work Cooldown Reset"
+      title="Work Cooldown Reset",
+      colour=discord.Colour.gold()
     ))
 
   @command_econset_work_clearcooldown.command(name="all")
