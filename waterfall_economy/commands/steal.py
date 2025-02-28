@@ -97,3 +97,35 @@ class StealCommand(commands.Cog):
         await ctx.send(f"{target.mention} doesn't have enough {currency} for you to steal that much!")
     else:
       await ctx.send(f"You don't have enough {currency} to steal that much!")
+
+  @command_steal.command(name="cooldown")
+  async def command_steal_cooldown(self, ctx, target: discord.Member = None):
+    """Check your current steal cooldown"""
+    if not target:
+      target = ctx.author
+
+    cur_time = calendar.timegm(ctx.message.created_at.utctimetuple())
+    next_steal = await self.config.member(ctx.author).steal_cooldown() + await self.config.STEAL_COOLDOWN()
+    if cur_time < next_steal:
+      relative_time = discord.utils.format_dt(
+        datetime.now(timezone.utc) + timedelta(seconds=next_steal - cur_time), "R"
+      )
+      await ctx.send(f"{target.mention} is on cooldown!\n You can steal again {relative_time}!")
+    else:
+      await ctx.send(f"{target.mention} not on cooldown!")
+
+  @command_steal.command(name="immunity")
+  async def command_steal_immunity(self, ctx, target: discord.Member = None):
+    """Check your current steal immunity"""
+    if not target:
+      target = ctx.author
+
+    cur_time = calendar.timegm(ctx.message.created_at.utctimetuple())
+    immunity = await self.config.member(target).steal_immunity()
+    if cur_time < immunity:
+      relative_time = discord.utils.format_dt(
+        datetime.now(timezone.utc) + timedelta(seconds=immunity - cur_time), "R"
+      )
+      await ctx.send(f"{target.mention} is currently immune to being robbed!\n This immunity will expire {relative_time}!")
+    else:
+      await ctx.send(f"{target.mention} is not immune to being robbed!")
