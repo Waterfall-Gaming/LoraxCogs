@@ -53,8 +53,7 @@ class EconomySettingsCommand(commands.Cog):
     steal_max = await self.config.STEAL_MAX()
 
     await ctx.send(embed=discord.Embed(
-      message=f"Steal Success Rate: {steal_rate}%\nSteal Immunity Duration: {steal_immunity} seconds\nSteal Cooldown: {steal_cooldown} seconds\nMin Steal Amount: {humanize_number(steal_min)}\nMax Steal Amount: {humanize_number(steal_max)}",
-      author=ctx.author,
+      description=f"Steal Success Rate: {steal_rate}%\nSteal Immunity Duration: {steal_immunity} seconds\nSteal Cooldown: {steal_cooldown} seconds\nMin Steal Amount: {humanize_number(steal_min)}\nMax Steal Amount: {humanize_number(steal_max)}",
       title="Steal Settings",
       colour=discord.Colour.gold()
     ))
@@ -267,7 +266,7 @@ class EconomySettingsCommand(commands.Cog):
         await self.config.member(user).job_tier.set(0)
         await self.config.member(user).job_times_worked.set(0)
 
-    await ctx.send(embed=SettingChangedEmbed("Job Removed", name))
+    await ctx.send(embed=SettingChangedEmbed("Job Removed", job_id))
 
   @command_econset_work_jobs.group(name="edit")
   async def command_econset_work_jobs_edit(self, ctx, job_id: str, name: str = None, description: str = None, emoji: str = None, min_times_worked: int = None):

@@ -86,8 +86,8 @@ class StealCommand(commands.Cog):
       if await bank.can_spend(target, amount):
         if randint(1, 100) <= steal_rate:
           await bank.transfer_credits(target, ctx.author, amount)
-          await ctx.send(f"You successfully stole {humanize_number(amount)} {currency} from {target.mention}!")
           await self.config.member(target).steal_immunity.set(cur_time)
+          await ctx.send(f"You successfully stole {humanize_number(amount)} {currency} from {target.mention}!")
         else:
           await bank.transfer_credits(ctx.author, target, amount//2)
           await ctx.send(f"You failed to rob {target.mention} and lost {humanize_number(amount//2)} {currency}!")
