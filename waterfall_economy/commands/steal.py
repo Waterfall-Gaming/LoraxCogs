@@ -98,7 +98,11 @@ class StealCommand(commands.Cog):
     else:
       await ctx.send(f"You don't have enough {currency} to steal that much!")
 
-  @command_steal.command(name="cooldown")
+  @commands.group(name="stealinfo", aliases=["robinfo"])
+  async def command_stealinfo(self, ctx):
+    """Get information about your steal cooldown and immunity"""
+
+  @command_stealinfo.command(name="cooldown")
   async def command_steal_cooldown(self, ctx, target: discord.Member = None):
     """Check your current steal cooldown"""
     if not target:
@@ -114,7 +118,7 @@ class StealCommand(commands.Cog):
     else:
       await ctx.send(f"{target.mention} not on cooldown!")
 
-  @command_steal.command(name="immunity")
+  @command_stealinfo.command(name="immunity")
   async def command_steal_immunity(self, ctx, target: discord.Member = None):
     """Check your current steal immunity"""
     if not target:
