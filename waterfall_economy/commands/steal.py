@@ -1,5 +1,3 @@
-from encodings.aliases import aliases
-
 from redbot.core import Config, commands, app_commands, bank
 from redbot.core.utils.chat_formatting import humanize_number
 

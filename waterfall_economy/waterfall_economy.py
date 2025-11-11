@@ -11,6 +11,7 @@ import calendar
 from random import randint, randrange
 
 from .commands import EconomyCommands
+from .util.gambling import Bet
 
 
 def guild_only():
@@ -36,8 +37,8 @@ class WaterfallEconomy(
     "STEAL_MAX": 10_000,
     "STEAL_IMMUNITY": 86_400,
     "STEAL_SUCCESS_RATE": 50,
-    "JOB_COOLDOWN": 43_200, # 12h
-    "JOB_APPLY_COOLDOWN": 86_400, # 24h
+    "JOB_COOLDOWN": 43_200,  # 12h
+    "JOB_APPLY_COOLDOWN": 86_400,  # 24h
     "JOBS": {
       "wcdonalds": {
         "name": "WcDonald's",
@@ -50,6 +51,21 @@ class WaterfallEconomy(
           {"name": "Manager", "rate": 200, "min_hours": 8, "max_hours": 10, "times_worked": 16},
         ],
       },
+    },
+    "GAMBLING": {
+      "ROULETTE": {
+        "MIN_BET": 10,
+        "MAX_BET": 10_000,
+        "MAX_DURATION": 600,
+        "MIN_DURATION": 30,
+        "OPEN_TABLES": [],
+        "TABLE_OPEN_COST": None,
+      },
+      "RUSSIAN_ROULETTE": {
+        "MIN_BET": 100,
+        "MAX_BET": 10_000,
+        "BULLETS": 6,
+      }
     }
   }
 
