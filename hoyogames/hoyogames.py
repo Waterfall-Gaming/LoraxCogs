@@ -12,7 +12,7 @@ from redbot.core.commands.requires import PrivilegeLevel
 
 
 class HoYoGames(commands.Cog):
-  """Waterfall Custom Verification cog, idk how it'll work yet."""
+  """Cog for HoYoVerse games"""
 
   default_guild_settings = {
     "REDEEM_LINK": {

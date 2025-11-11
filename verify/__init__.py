@@ -1,4 +1,4 @@
-from .waterfall_verification import WaterfallVerification
+from .verify import WaterfallVerification
 
 
 async def setup(bot):

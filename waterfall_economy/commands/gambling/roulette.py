@@ -47,11 +47,14 @@ class RouletteCommands(commands.Cog):
     "column": ["column", "col"]
   }
 
+  open_tables = {}
+
+  close_tasks = set()
+
   def __init__(self, bot):
     # super().__init__()
     self.bot = bot
     self.config = None
-    self._close_tasks = set()
 
   @staticmethod
   def __build_dozen_bet(dozen_num: int):
@@ -79,7 +82,10 @@ class RouletteCommands(commands.Cog):
 
   def _parse_bet(self, bet_type: str) -> RouletteBetType:
     """Parse a bet type string into a RouletteBet object"""
-    bet_split = re.split(r"([ \-–_+&,]|(, )|(,? (to|and) ))", bet_type.strip().lower())
+    bet_split = re.split(r"[ \-–_+&,]|(?:, )|(?:,? (?:to|and) )", ' '.join(bet_type).strip().lower())
+    bet_split = [x for x in bet_split if x]
+
+    # print(bet_split)
 
     # length 1
     if len(bet_split) == 1:
@@ -217,7 +223,7 @@ class RouletteCommands(commands.Cog):
       # column (column 1 style)
       elif bet_split[0] in self.bet_names["column"] and bet_split[1].isdigit():
         column_num = int(bet_split[1])
-        if 1 <= column_num <= 3:
+        if not 1 <= column_num <= 3:
           raise ValueError("Column bets must be on columns 1, 2, or 3.")
         return RouletteBetType(
           name=f"Column Bet on Column {column_num}",
@@ -298,21 +304,19 @@ class RouletteCommands(commands.Cog):
   async def _close_table(self, table: discord.Thread, delay: int = 0):
     """Close a roulette table and determine winners"""
     # Implementation of closing the table
-    table = await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES.get(table.id)
-    if table is None or not table["is_open"]:
+    _table = self.open_tables.get(str(table.id))
+    if _table is None or not _table["is_open"]:
       return
-    if table.id in self._close_tasks:
+    if table.id in self.close_tasks and delay != 0:
       return
 
-    self._close_tasks.add(table.id)
+    self.close_tasks.add(table.id)
     await asyncio.sleep(delay)
 
     # mark the table as closed
-    _table_data = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.get_raw(str(table.id))
-    _table_data.is_open = False
-    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.set_raw(str(table.id), value=_table_data)
+    self.open_tables[str(table.id)]["is_open"] = False
 
-    with table.typing():
+    async with table.typing():
       spinning_msg = await table.send("Spinning the roulette wheel... 🎡")
       await asyncio.sleep(5)  # simulate spinning time
 
@@ -330,7 +334,7 @@ class RouletteCommands(commands.Cog):
   async def _calculate_winners(self, table: discord.Thread, winning_number: int):
     """Calculate winners for a given roulette table and winning number"""
     # Implementation of calculating winners
-    bets = await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES.get_raw(str(table.id), "bets")
+    bets = self.open_tables[str(table.id)]['bets']
     currency_name = await bank.get_currency_name(table.guild)
 
     async with table.typing():
@@ -347,10 +351,12 @@ class RouletteCommands(commands.Cog):
     # wait to close
     await asyncio.sleep(5)
     await table.send("This table is now closed. Thank you for playing!")
+    await table.edit(archived=True, locked=True)
+    await asyncio.sleep(5)
 
     # close the table
-    await table.edit(archived=True)
-    await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES.clear_raw(str(table.id))
+    await table.delete()
+    del self.open_tables[str(table.id)]
 
   @commands.group(name="roulette", aliases=["roul", "rol"])
   @commands.guild_only()
@@ -363,13 +369,12 @@ class RouletteCommands(commands.Cog):
       self, ctx: commands.Context,
       min_bet: int = None, max_bet: int = None,
       timeout: TimedeltaConverter = timedelta(seconds=300),
-      table_name: str = "{}'s Roulette Table"
+      table_name: str = "{user}'s Roulette Table ({time})"
   ):
     """Open a roulette table"""
 
     # check if the user already has an open table
-    open_tables = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES()
-    for table_id, table_data in open_tables.items():
+    for table_id, table_data in self.open_tables.items():
       if table_data["owner"] == ctx.author.id and table_data["is_open"]:
         await ctx.send(embed=ErrorEmbed(
           title="Too Many Open Tables",
@@ -433,28 +438,30 @@ class RouletteCommands(commands.Cog):
 
     # now that we've validated stuff, create the table and thread and stuff
 
+    table_name = table_name.format(user=ctx.author.display_name, time=datetime.now().strftime('%H:%M on %d/%m/%Y'))
+
     # create a thread for the table
-    table = await ctx.channel.create_thread(name=table_name.format(ctx.author.display_name), auto_archive_duration=60)
+    table = await ctx.channel.create_thread(name=table_name, auto_archive_duration=60)
 
     # write the table's thread into config
-    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.set_raw(str(table.id), value={
+    self.open_tables[str(table.id)] = {
       "owner": ctx.author.id,
       "min_bet": min_bet,
       "max_bet": max_bet,
       "duration": timeout.total_seconds(),
       "bets": [],
       "is_open": True,
-    })
+    }
 
     # when the table closes
-    table_closes = datetime.now() + timedelta(seconds=timeout.total_seconds())
+    table_closes = int(datetime.now().timestamp() + timeout.total_seconds())
 
     await table.send(
-      f"# {table_name.format(ctx.author.display_name)}\n"
+      f"# {table_name}\n"
       f"{ctx.author.mention} has opened a roulette table!\n"
       f"> Minimum Bet: {humanize_number(min_bet)} {currency_name}\n"
       f"> Maximum Bet: {humanize_number(max_bet)} {currency_name}\n"
-      f"*Betting closes <t:{datetime.now().timestamp() + timeout.total_seconds()}:R>*.\n"
+      f"*Betting closes <t:{table_closes}:R>*.\n"
     )
 
     self.bot.loop.create_task(self._close_table(table, int(timeout.total_seconds())))
@@ -463,22 +470,21 @@ class RouletteCommands(commands.Cog):
   async def command_roulette_bet(
       self, ctx: commands.Context,
       amount: int,
-      bet_type: str
+      *bet_type: str
   ):
     """Place a bet on the current roulette table"""
     # Implementation of placing a bet
-    tables = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES()
 
-    print(tables.keys(), ctx.channel.id)
+    # print(self.tables.keys(), ctx.channel.id)
 
-    if str(ctx.channel.id) not in tables.keys():
+    if str(ctx.channel.id) not in self.open_tables.keys():
       await ctx.send(embed=ErrorEmbed(
         title="No Open Table",
         message="There is no open roulette table in this channel."
       ))
       return
 
-    table_data = tables[ctx.channel.id]
+    table_data = self.open_tables[str(ctx.channel.id)]
 
     if not table_data["is_open"]:
       await ctx.send(embed=ErrorEmbed(
@@ -525,9 +531,7 @@ class RouletteCommands(commands.Cog):
       amount=amount
     )
 
-    _table_data = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.get_raw(str(ctx.channel.id))
-    _table_data.bets.append(bet)
-    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.set_raw(str(ctx.channel.id), value=_table_data)
+    self.open_tables[str(ctx.channel.id)]["bets"].append(bet)
 
     await ctx.send(
       f"{ctx.author.mention}, your **{parsed_bet_type.name}** of {humanize_number(amount)} has been placed!"
