@@ -79,7 +79,7 @@ class RouletteCommands(commands.Cog):
 
   def _parse_bet(self, bet_type: str) -> RouletteBetType:
     """Parse a bet type string into a RouletteBet object"""
-    bet_split = re.split(r"([ \-–_+&,]|(, )|(,? (to|and) )", bet_type.strip().lower())
+    bet_split = re.split(r"([ \-–_+&,]|(, )|(,? (to|and) ))", bet_type.strip().lower())
 
     # length 1
     if len(bet_split) == 1:
@@ -360,7 +360,7 @@ class RouletteCommands(commands.Cog):
   async def command_roulette_open(
       self, ctx: commands.Context,
       min_bet: int = None, max_bet: int = None,
-      timeout: TimedeltaConverter = TimedeltaConverter(seconds=300),
+      timeout: TimedeltaConverter = TimedeltaConverter("300s"),
       table_name: str = "{}'s Roulette Table"
   ):
     """Open a roulette table"""
