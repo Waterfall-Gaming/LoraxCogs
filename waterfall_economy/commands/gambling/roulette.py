@@ -329,7 +329,7 @@ class RouletteCommands(commands.Cog):
     """Calculate winners for a given roulette table and winning number"""
     # Implementation of calculating winners
     bets = await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES[table.id].bets()
-    currency_name = await bank.get_currency_name()
+    currency_name = await bank.get_currency_name(ctx.guild)
 
     async with table.typing():
       for bet in bets:
@@ -378,7 +378,7 @@ class RouletteCommands(commands.Cog):
     # validate min and max bet, or set them to defaults
     max_bet_cfg = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.MAX_BET()
     min_bet_cfg = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.MIN_BET()
-    currency_name = await bank.get_currency_name()
+    currency_name = await bank.get_currency_name(ctx.guild)
 
     # min bet validation
     if min_bet is None:
@@ -485,7 +485,7 @@ class RouletteCommands(commands.Cog):
 
     # validate bet amount
     if not (table_data["min_bet"] <= amount <= table_data["max_bet"]):
-      currency_name = await bank.get_currency_name()
+      currency_name = await bank.get_currency_name(ctx.guild)
       await ctx.send(embed=ErrorEmbed(
         title="Invalid Bet Amount",
         message=f"Your bet must be between {humanize_number(table_data['min_bet'])} and "
@@ -507,7 +507,7 @@ class RouletteCommands(commands.Cog):
     if await bank.can_spend(ctx.author, amount):
       await bank.withdraw_credits(ctx.author, amount)
     else:
-      currency_name = await bank.get_currency_name()
+      currency_name = await bank.get_currency_name(ctx.guild)
       await ctx.send(embed=ErrorEmbed(
         title="Insufficient Funds",
         message=f"You do not have enough {currency_name} to place this bet."
