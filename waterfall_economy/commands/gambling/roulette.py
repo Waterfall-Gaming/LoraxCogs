@@ -454,7 +454,7 @@ class RouletteCommands(commands.Cog):
       f"{ctx.author.mention} has opened a roulette table!\n"
       f"> Minimum Bet: {humanize_number(min_bet)} {currency_name}\n"
       f"> Maximum Bet: {humanize_number(max_bet)} {currency_name}\n"
-      f"*Betting closes <t:{datetime.now() + timedelta(seconds=timeout.total_seconds())}:R>*.\n"
+      f"*Betting closes <t:{datetime.now().timestamp() + timeout.total_seconds()}:R>*.\n"
     )
 
     self.bot.loop.create_task(self._close_table(table, int(timeout.total_seconds())))
@@ -469,7 +469,9 @@ class RouletteCommands(commands.Cog):
     # Implementation of placing a bet
     tables = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES()
 
-    if ctx.channel.id not in tables:
+    print(tables.keys, ctx.channel.id)
+
+    if str(ctx.channel.id) not in tables.keys():
       await ctx.send(embed=ErrorEmbed(
         title="No Open Table",
         message="There is no open roulette table in this channel."
