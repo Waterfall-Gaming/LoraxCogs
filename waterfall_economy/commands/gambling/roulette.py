@@ -308,7 +308,9 @@ class RouletteCommands(commands.Cog):
     await asyncio.sleep(delay)
 
     # mark the table as closed
-    await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES[table.id].is_open.set(False)
+    _table_data = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.get_raw(str(table.id))
+    _table_data.is_open = False
+    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.set_raw(str(table.id), value=_table_data)
 
     with table.typing():
       spinning_msg = await table.send("Spinning the roulette wheel... 🎡")
@@ -328,8 +330,8 @@ class RouletteCommands(commands.Cog):
   async def _calculate_winners(self, table: discord.Thread, winning_number: int):
     """Calculate winners for a given roulette table and winning number"""
     # Implementation of calculating winners
-    bets = await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES[table.id].bets()
-    currency_name = await bank.get_currency_name(ctx.guild)
+    bets = await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES.get_raw(str(table.id), "bets")
+    currency_name = await bank.get_currency_name(table.guild)
 
     async with table.typing():
       for bet in bets:
@@ -348,7 +350,7 @@ class RouletteCommands(commands.Cog):
 
     # close the table
     await table.edit(archived=True)
-    await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES[table.id].clear()
+    await self.config.guild(table.guild).GAMBLING.ROULETTE.OPEN_TABLES.clear_raw(str(table.id))
 
   @commands.group(name="roulette", aliases=["roul", "rol"])
   @commands.guild_only()
@@ -435,7 +437,7 @@ class RouletteCommands(commands.Cog):
     table = await ctx.channel.create_thread(name=table_name.format(ctx.author.display_name), auto_archive_duration=60)
 
     # write the table's thread into config
-    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES[table.id].set({
+    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.set_raw(str(table.id), value={
       "owner": ctx.author.id,
       "min_bet": min_bet,
       "max_bet": max_bet,
@@ -521,10 +523,12 @@ class RouletteCommands(commands.Cog):
       amount=amount
     )
 
-    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES[ctx.channel.id].bets.append(bet)
+    _table_data = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.get_raw(str(ctx.channel.id))
+    _table_data.bets.append(bet)
+    await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES.set_raw(str(ctx.channel.id), value=_table_data)
 
     await ctx.send(
-      f"{ctx.author.mention}, your bet of {humanize_number(amount)} on **{parsed_bet_type.name}** has been placed!"
+      f"{ctx.author.mention}, your **{parsed_bet_type.name}** of {humanize_number(amount)} has been placed!"
     )
 
   @command_roulette.command(name="spin", aliases=["roll", "play", "close"])
