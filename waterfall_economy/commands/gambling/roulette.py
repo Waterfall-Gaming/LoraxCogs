@@ -469,7 +469,7 @@ class RouletteCommands(commands.Cog):
     # Implementation of placing a bet
     tables = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.OPEN_TABLES()
 
-    print(tables.keys, ctx.channel.id)
+    print(tables.keys(), ctx.channel.id)
 
     if str(ctx.channel.id) not in tables.keys():
       await ctx.send(embed=ErrorEmbed(
