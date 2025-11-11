@@ -11,7 +11,6 @@ import calendar
 from random import randint, randrange
 
 from .commands import EconomyCommands
-from .util.gambling import Bet
 
 
 def guild_only():
