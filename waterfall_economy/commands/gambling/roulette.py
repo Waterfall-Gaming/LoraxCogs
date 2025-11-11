@@ -360,7 +360,7 @@ class RouletteCommands(commands.Cog):
   async def command_roulette_open(
       self, ctx: commands.Context,
       min_bet: int = None, max_bet: int = None,
-      timeout: TimedeltaConverter = 300,
+      timeout: TimedeltaConverter = timedelta(seconds=300),
       table_name: str = "{}'s Roulette Table"
   ):
     """Open a roulette table"""

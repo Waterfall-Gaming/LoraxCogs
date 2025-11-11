@@ -57,7 +57,7 @@ class WaterfallEconomy(
         "MAX_BET": 10_000,
         "MAX_DURATION": 600,
         "MIN_DURATION": 30,
-        "OPEN_TABLES": [],
+        "OPEN_TABLES": {},
         "TABLE_OPEN_COST": None,
       },
       "RUSSIAN_ROULETTE": {
