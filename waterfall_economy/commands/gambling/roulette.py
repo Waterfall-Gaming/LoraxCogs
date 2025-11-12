@@ -1,3 +1,5 @@
+from sys import prefix
+
 from redbot.core import Config, commands, app_commands, bank
 from redbot.core.commands.converter import TimedeltaConverter
 from redbot.core.utils.chat_formatting import humanize_number
@@ -9,7 +11,7 @@ import discord
 import re
 
 from ...util.gambling import RouletteBetType, RouletteBet
-from ...util.embeds import ErrorEmbed
+from ...util.embeds import ErrorEmbed, OfficialEmbed
 
 
 class RouletteCommands(commands.Cog):
@@ -590,3 +592,83 @@ class RouletteCommands(commands.Cog):
       return
 
     await self._close_table(ctx.channel)
+
+  @command_roulette.group(name="help", aliases=["?"])
+  async def command_roulette_help(self, ctx: commands.Context):
+    """Roulette help commands"""
+    pass
+
+  @command_roulette_help.command(name="bets", aliases=["bettypes", "types"])
+  async def command_roulette_help_bets(self, ctx: commands.Context):
+    """Help with bet types"""
+    prefix = await self.bot.get_valid_prefixes()[0]
+
+    embed = OfficialEmbed(
+      title="Roulette Bet Types",
+      description=(
+        "Here are the available bet types you can place in roulette:\n\n"
+        "**Straight Bet**: Bet on a single number (0-36). Payout: 35:1\n"
+        "**Split Bet**: Bet on two adjacent numbers. Payout: 17:1\n"
+        "**Street Bet**: Bet on three numbers in a row. Payout: 11:1\n"
+        "**Corner Bet**: Bet on four numbers that form a square. Payout: 8:1\n"
+        "**Double Street Bet**: Bet on six numbers in two rows. Payout: 5:1\n"
+        "**Dozen Bet**: Bet on one of the three dozens (1-12, 13-24, 25-36). Payout: 2:1\n"
+        "**Column Bet**: Bet on one of the three columns. Payout: 2:1\n"
+        "**Red/Black Bet**: Bet on all red or all black numbers. Payout: 1:1\n"
+        "**Even/Odd Bet**: Bet on all even or all odd numbers. Payout: 1:1\n"
+        "**Low/High Bet**: Bet on low (1-18) or high (19-36) numbers. Payout: 1:1\n"
+        "**Snake Bet**: A special bet covering a 'snake' pattern on the table. Payout: 2:1\n"
+        "**Top Line Bet**: Bet on 0, 1, 2, and 3. Payout: 8:1\n\n"
+        "To place a bet, use the command:\n"
+        f"`{prefix}roulette bet <amount> <bet type>`\n"
+      ),
+      color=discord.Color.blue()
+    )
+    await ctx.send(embed=embed)
+
+  @command_roulette_help.command(name="table", aliases=["tables", "tabletypes"])
+  async def command_roulette_help_table(self, ctx: commands.Context):
+    """Help with roulette table types"""
+    prefix = await self.bot.get_valid_prefixes()[0]
+    table_types = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.TABLE_TYPES()
+
+    embed = OfficialEmbed(
+      title="Roulette Table Types",
+      description="These are the available roulette table types:",
+    )
+
+    for table_type, settings in table_types.items():
+      embed.add_field(
+        name=f"**{table_type.capitalize()} Table**",
+        value=(
+          f"- Minimum Bet: {humanize_number(settings['MIN_BET'])}\n"
+          f"- Maximum Bet: {humanize_number(settings['MAX_BET'])}\n"
+          f"- Opening Fee: {humanize_number(settings['FEE'])}\n"
+        ),
+        inline=True
+      )
+
+    await ctx.send(embed=embed)
+
+  @command_roulette_help.command(name="play", aliases=["start", "create"])
+  async def command_roulette_help_play(self, ctx: commands.Context):
+    """Help with opening a roulette table"""
+    prefix = await self.bot.get_valid_prefixes()[0]
+
+    embed = OfficialEmbed(
+      title="Opening a Roulette Table",
+      description=(
+        "To open a roulette table, use the command:\n"
+        f"`{prefix}roulette open [table_type] [timeout] [table_name]`\n\n"
+        "**Parameters:**\n"
+        "- `table_type`: The type of table to open (default: standard). Different types may have different min/max bets.\n"
+        "- `timeout`: Duration before betting closes (default: 300s). Specify in seconds or using time format (e.g., 5m for 5 minutes).\n"
+        "- `table_name`: Custom name for the table thread (default: \"{user}'s Roulette Table ({time})\").\n\n"
+        "Example:\n"
+        f"`{prefix}roulette open standard 10m My First Roulette Table`\n"
+      ),
+      color=discord.Color.blue()
+    )
+    await ctx.send(embed=embed)
+
+
