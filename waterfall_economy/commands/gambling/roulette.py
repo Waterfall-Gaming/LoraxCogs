@@ -313,6 +313,10 @@ class RouletteCommands(commands.Cog):
     self.close_tasks.add(table.id)
     await asyncio.sleep(delay)
 
+    # table was already spun manually
+    if not table.guild.fetch_channel(table.id):
+      return
+
     # mark the table as closed
     self.open_tables[str(table.id)]["is_open"] = False
 
@@ -540,5 +544,22 @@ class RouletteCommands(commands.Cog):
   @command_roulette.command(name="spin", aliases=["roll", "play", "close"])
   async def command_roulette_spin(self, ctx: commands.Context):
     """Spin the roulette wheel. Closes betting."""
-    # Implementation of spinning the roulette wheel
+
+    # check if it's a roulette table
+    if str(ctx.channel.id) not in self.open_tables.keys():
+      await ctx.send(embed=ErrorEmbed(
+        title="No Open Table",
+        message="There is no open roulette table in this channel."
+      ))
+      return
+
+    # are you allowed to do that?
+    if (ctx.author.id != self.open_tables[str(ctx.channel.id)]["owner"]
+        and not ctx.author.guild_permissions.administrator):
+      await ctx.send(embed=ErrorEmbed(
+        title="Permission Denied",
+        message="Only the table owner can spin the roulette wheel."
+      ))
+      return
+
     await self._close_table(ctx.channel)
