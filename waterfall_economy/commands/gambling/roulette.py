@@ -35,7 +35,7 @@ class RouletteCommands(commands.Cog):
 
   bet_names = {
     "straight": ["straight", "number", "num", "single"],
-    "zero": ["zero"],
+    "zero": ["zero", "green"],
     "red": ["red", "reds"],
     "black": ["black", "blacks"],
     "even": ["even", "evens"],
@@ -92,7 +92,7 @@ class RouletteCommands(commands.Cog):
     # length 1
     if len(bet_split) == 1:
       # straight bet
-      if bet_split[0].isdigit():
+      if bet_split[0].isdigit() and bet_split[0] != "0":
         number = int(bet_split[0])
         if 0 <= number <= 36:
           return RouletteBetType(
@@ -104,31 +104,31 @@ class RouletteCommands(commands.Cog):
           raise ValueError("Straight bets must be on numbers between 0 and 36.")
       elif bet_split[0] in self.bet_names["zero"]:
         return RouletteBetType(
-          name="0️⃣ Zero",
+          name="0️⃣ Zero Bet",
           payout=35.0,
           condition=lambda result: result == 0
         )
       elif bet_split[0] in self.bet_names["red"]:
         return RouletteBetType(
-          name="🔴 Red",
+          name="🔴 Red Bet",
           payout=1.0,
           condition=lambda result: result in self.reds
         )
       elif bet_split[0] in self.bet_names["black"]:
         return RouletteBetType(
-          name="⚫ Black",
+          name="⚫ Black Bet",
           payout=1.0,
           condition=lambda result: result in self.blacks
         )
       elif bet_split[0] in self.bet_names["even"]:
         return RouletteBetType(
-          name="Evens",
+          name="Evens Bet",
           payout=1.0,
           condition=lambda result: result != 0 and result % 2 == 0
         )
       elif bet_split[0] in self.bet_names["odd"]:
         return RouletteBetType(
-          name="Odds",
+          name="Odds Bet",
           payout=1.0,
           condition=lambda result: result % 2 == 1
         )
@@ -601,49 +601,73 @@ class RouletteCommands(commands.Cog):
   @command_roulette_help.command(name="bets", aliases=["bettypes", "types"])
   async def command_roulette_help_bets(self, ctx: commands.Context):
     """Help with bet types"""
-    prefix = await self.bot.get_valid_prefixes()[0]
+    prefix = (await self.bot.get_valid_prefixes())[0]
 
     embed = OfficialEmbed(
       title="Roulette Bet Types",
-      description=(
-        "Here are the available bet types you can place in roulette:\n\n"
-        "**Straight Bet**: Bet on a single number (0-36). Payout: 35:1\n"
-        "**Split Bet**: Bet on two adjacent numbers. Payout: 17:1\n"
-        "**Street Bet**: Bet on three numbers in a row. Payout: 11:1\n"
-        "**Corner Bet**: Bet on four numbers that form a square. Payout: 8:1\n"
-        "**Double Street Bet**: Bet on six numbers in two rows. Payout: 5:1\n"
-        "**Dozen Bet**: Bet on one of the three dozens (1-12, 13-24, 25-36). Payout: 2:1\n"
-        "**Column Bet**: Bet on one of the three columns. Payout: 2:1\n"
-        "**Red/Black Bet**: Bet on all red or all black numbers. Payout: 1:1\n"
-        "**Even/Odd Bet**: Bet on all even or all odd numbers. Payout: 1:1\n"
-        "**Low/High Bet**: Bet on low (1-18) or high (19-36) numbers. Payout: 1:1\n"
-        "**Snake Bet**: A special bet covering a 'snake' pattern on the table. Payout: 2:1\n"
-        "**Top Line Bet**: Bet on 0, 1, 2, and 3. Payout: 8:1\n\n"
-        "To place a bet, use the command:\n"
-        f"`{prefix}roulette bet <amount> <bet type>`\n"
+      message=(
+        "Here are the available bet types you can place in roulette:\n"
       ),
-      color=discord.Color.blue()
+      guild=ctx.guild
     )
+
+    bet_types = [
+      ("Straight Bet", "A bet on a single number (payout: 35:1).", "17"),
+      ("Red/Black Bet", "A bet on all red or black numbers (payout: 1:1).", "red"),
+      ("Even/Odd Bet", "A bet on all even or odd numbers (payout: 1:1).", "even"),
+      ("Low/High Bet", "A bet on low (1-18) or high (19-36) numbers (payout: 1:1).", "low|1-18"),
+      ("Dozen Bet", "A bet on one of the three dozens: 1-12, 13-24, or 25-36 (payout: 2:1).", "1st dozen|dozen 1|first dozen"),
+      ("Column Bet", "A bet on one of the three columns of numbers (payout: 2:1).", "1st col|column 1|first column"),
+      ("Split Bet", "A bet on two adjacent numbers (payout: 17:1).", "17 18"),
+      ("Street Bet", "A bet on three numbers in a horizontal line (payout: 11:1).", "1 2 3|1-3"),
+      ("Corner Bet", "A bet on four numbers that form a square (payout: 8:1).", "1 2 4 5|corner 1"),
+      ("Double Street Bet", "A bet on six numbers in two horizontal lines (payout: 5:1).", "1-6"),
+      ("Top Line Bet", "A bet on 0, 1, 2, and 3 (payout: 8:1).", "top|top line"),
+      ("Snake Bet", "A bet on a snaking pattern of numbers (payout: 2:1).", "snake"),
+      ("Zero Bet", "A bet specifically on 0 (payout: 35:1).", "zero|green"),
+    ]
+
+    for name, description, example in bet_types:
+      embed.add_field(
+        name=f"**{name}**",
+        value=(
+          f"{description}\n"
+          f"*Example:* `{prefix}roulette bet 100 <{example}>`"
+        ),
+        inline=True
+      )
+
+    embed.add_field(
+        name="Placing a Bet",
+        value=(
+          "To place a bet, use the command:\n"
+          f"`{prefix}roulette bet <amount> <bet type>`\n"
+        ),
+        inline=False
+    )
+
     await ctx.send(embed=embed)
 
   @command_roulette_help.command(name="table", aliases=["tables", "tabletypes"])
   async def command_roulette_help_table(self, ctx: commands.Context):
     """Help with roulette table types"""
-    prefix = await self.bot.get_valid_prefixes()[0]
+    prefix = (await self.bot.get_valid_prefixes())[0]
     table_types = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.TABLE_TYPES()
 
     embed = OfficialEmbed(
       title="Roulette Table Types",
-      description="These are the available roulette table types:",
+      message="These are the available roulette table types:",
+      guild=ctx.guild
     )
 
     for table_type, settings in table_types.items():
       embed.add_field(
-        name=f"**{table_type.capitalize()} Table**",
+        name=f"**{' '.join(table_type.split('_')).capitalize()} Table**",
         value=(
-          f"- Minimum Bet: {humanize_number(settings['MIN_BET'])}\n"
-          f"- Maximum Bet: {humanize_number(settings['MAX_BET'])}\n"
-          f"- Opening Fee: {humanize_number(settings['FEE'])}\n"
+          f"- Minimum Bet: `{humanize_number(settings['MIN_BET'])}`\n"
+          f"- Maximum Bet: `{humanize_number(settings['MAX_BET'])}`\n"
+          f"- Opening Fee: `{humanize_number(settings['FEE'])}`\n"
+          f"*To open: `{prefix}roulette open {table_type}`*"
         ),
         inline=True
       )
@@ -653,11 +677,11 @@ class RouletteCommands(commands.Cog):
   @command_roulette_help.command(name="play", aliases=["start", "create"])
   async def command_roulette_help_play(self, ctx: commands.Context):
     """Help with opening a roulette table"""
-    prefix = await self.bot.get_valid_prefixes()[0]
+    prefix = (await self.bot.get_valid_prefixes())[0]
 
     embed = OfficialEmbed(
       title="Opening a Roulette Table",
-      description=(
+      message=(
         "To open a roulette table, use the command:\n"
         f"`{prefix}roulette open [table_type] [timeout] [table_name]`\n\n"
         "**Parameters:**\n"
@@ -665,9 +689,14 @@ class RouletteCommands(commands.Cog):
         "- `timeout`: Duration before betting closes (default: 300s). Specify in seconds or using time format (e.g., 5m for 5 minutes).\n"
         "- `table_name`: Custom name for the table thread (default: \"{user}'s Roulette Table ({time})\").\n\n"
         "Example:\n"
-        f"`{prefix}roulette open standard 10m My First Roulette Table`\n"
+        f"- `{prefix}roulette open`\n"
+        f"- `{prefix}roulette open standard 10m \"My First Roulette Table\"`\n\n"
+        "**Note**:\n"
+        "> You will be charged a fee to open the table based on the table type.\n"
+        "> The game will start in a separate thread, and players can place bets until the timeout expires, or until the "
+        "table owner (or an admin) manually spins the wheel."
       ),
-      color=discord.Color.blue()
+      guild=ctx.guild
     )
     await ctx.send(embed=embed)
 
