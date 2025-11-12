@@ -488,7 +488,7 @@ class RouletteCommands(commands.Cog):
   @command_roulette.command(name="bet")
   async def command_roulette_bet(
       self, ctx: commands.Context,
-      amount: int,
+      amount: int | str,
       *bet_type: str
   ):
     """Place a bet on the current roulette table"""
@@ -511,6 +511,18 @@ class RouletteCommands(commands.Cog):
         message="The roulette table in this channel is closed for betting."
       ))
       return
+
+    # going all in
+    if isinstance(amount, str):
+      if amount.lower() in ["all", "max", "everything", "all_in"]:
+        user_balance = await bank.get_balance(ctx.author)
+        amount = user_balance
+      else:
+        await ctx.send(embed=ErrorEmbed(
+          title="Invalid Bet Amount",
+          message="Please specify a valid bet amount."
+        ))
+        return
 
     # validate bet amount
     if not (table_data["min_bet"] <= amount <= table_data["max_bet"]):
