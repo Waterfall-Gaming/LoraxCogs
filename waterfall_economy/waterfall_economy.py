@@ -53,8 +53,13 @@ class WaterfallEconomy(
     },
     "GAMBLING": {
       "ROULETTE": {
-        "MIN_BET": 10,
-        "MAX_BET": 10_000,
+        "TABLE_TYPES": {
+          "broke": {"MIN_BET": 1, "MAX_BET": 100, "FEE": 0},
+          "poor": {"MIN_BET": 10, "MAX_BET": 1_000, "FEE": 10},
+          "standard": {"MIN_BET": 100, "MAX_BET": 10_000, "FEE": 100},
+          "high_roller": {"MIN_BET": 1_000, "MAX_BET": 100_000, "FEE": 1_000},
+          "irresponsible": {"MIN_BET": 10_000, "MAX_BET": 100_000_000, "FEE": 10_000},
+        },
         "MAX_DURATION": 600,
         "MIN_DURATION": 30,
         "OPEN_TABLES": {},

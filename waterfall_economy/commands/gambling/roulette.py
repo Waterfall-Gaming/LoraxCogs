@@ -371,7 +371,7 @@ class RouletteCommands(commands.Cog):
   @command_roulette.command(name="open", aliases=["start", "create"])
   async def command_roulette_open(
       self, ctx: commands.Context,
-      min_bet: int = None, max_bet: int = None,
+      table_type: str = "standard",
       timeout: TimedeltaConverter = timedelta(seconds=300),
       table_name: str = "{user}'s Roulette Table ({time})"
   ):
@@ -391,25 +391,30 @@ class RouletteCommands(commands.Cog):
     min_bet_cfg = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.MIN_BET()
     currency_name = await bank.get_currency_name(ctx.guild)
 
+    # get table types
+    table_types = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.TABLE_TYPES()
     # min bet validation
-    if min_bet is None:
-      min_bet = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.MIN_BET()
-    elif min_bet < min_bet_cfg:
+    if table_type not in table_types.keys():
       await ctx.send(embed=ErrorEmbed(
-        title="Invalid Minimum Bet",
-        message=f"The minimum allowed bet for roulette is {humanize_number(min_bet_cfg)} {currency_name}."
+        title="Invalid Table Type",
+        message=f"The table type '{table_type}' does not exist. Available types: "
+                f"`{'`, `'.join(table_types.keys())}`."
       ))
       return
 
-    # max bet validation
-    if max_bet is None:
-      max_bet = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.MAX_BET()
-    elif max_bet > max_bet_cfg:
+    if bank.can_spend(ctx.author, table_types[table_type]["FEE"]):
+      await bank.withdraw_credits(ctx.author, table_types[table_type]["FEE"])
+    else:
       await ctx.send(embed=ErrorEmbed(
-        title="Invalid Maximum Bet",
-        message=f"The maximum allowed bet for roulette is {humanize_number(max_bet_cfg)} {currency_name}."
+        title="Insufficient Funds",
+        message=f"You do not have enough {currency_name} to open this table. "
+                f"Opening a '{table_type}' table costs "
+                f"{humanize_number(table_types[table_type]['FEE'])} {currency_name}."
       ))
       return
+
+    min_bet = table_types[table_type]["MIN_BET"]
+    max_bet = table_types[table_type]["MAX_BET"]
 
     # validate timeout
     max_duration_cfg = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.MAX_DURATION()
