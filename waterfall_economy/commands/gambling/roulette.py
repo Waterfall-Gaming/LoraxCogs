@@ -343,9 +343,13 @@ class RouletteCommands(commands.Cog):
     bets = self.open_tables[str(table.id)]['bets']
     currency_name = await bank.get_currency_name(table.guild)
 
+    total_lost = 0
+
     async with table.typing():
       for bet in bets:
         user = bet.bettor
+        user_lost = await self.config.member(user).gambling_losses()
+
         if bet.check_bet_win(winning_number):
           payout = int(bet.amount * (bet.bet_type.payout + 1))
           await bank.deposit_credits(user, payout)
@@ -354,6 +358,13 @@ class RouletteCommands(commands.Cog):
             f"Congratulations {user.mention}! Your bet on **{bet.bet_type.name}** won! "
             f"You won {humanize_number(payout)} {currency_name}."
           )
+        else:
+          user_lost += bet.amount
+          await self.config.member(user).gambling_losses.set(user_lost)
+          total_lost += bet.amount
+
+    await self.config.guild(table.guild).GAMBLING.ROULETTE.TOTAL_LOST.set(total_lost)
+
     # wait to close
     await asyncio.sleep(5)
     await table.send("This table is now closed. Thank you for playing!")
@@ -469,6 +480,7 @@ class RouletteCommands(commands.Cog):
       "owner": ctx.author.id,
       "min_bet": min_bet,
       "max_bet": max_bet,
+      "type": table_type,
       "duration": timeout.total_seconds(),
       "bets": [],
       "is_open": True,
@@ -478,10 +490,10 @@ class RouletteCommands(commands.Cog):
     table_closes = int(datetime.now().timestamp() + timeout.total_seconds())
 
     await table.send(
-      f"# {table_name}\n"
-      f"{ctx.author.mention} has opened a roulette table!\n"
-      f"> Minimum Bet: {humanize_number(min_bet)} {currency_name}\n"
-      f"> Maximum Bet: {humanize_number(max_bet)} {currency_name}\n"
+      f"# {table_name}\n" +
+      f"{ctx.author.mention} has opened a roulette table!\n" +
+      f"> Minimum Bet: {humanize_number(min_bet)} {currency_name}\n" +
+      (f"> Maximum Bet: {humanize_number(max_bet)} {currency_name}\n" if max_bet else "> No Maximum Bet!\n") +
       f"*Betting closes <t:{table_closes}:R>*.\n"
     )
 
@@ -527,12 +539,19 @@ class RouletteCommands(commands.Cog):
         return
 
     # validate bet amount
-    if not (table_data["min_bet"] <= amount <= table_data["max_bet"]):
+    if table_data["max_bet"] and not(table_data["min_bet"] <= amount <= table_data["max_bet"]):
       currency_name = await bank.get_currency_name(ctx.guild)
       await ctx.send(embed=ErrorEmbed(
         title="Invalid Bet Amount",
         message=f"Your bet must be between {humanize_number(table_data['min_bet'])} and "
                 f"{humanize_number(table_data['max_bet'])} {currency_name}."
+      ))
+      return
+    elif not table_data["max_bet"] and amount < table_data["min_bet"]:
+      currency_name = await bank.get_currency_name(ctx.guild)
+      await ctx.send(embed=ErrorEmbed(
+        title="Invalid Bet Amount",
+        message=f"Your bet must be at least {humanize_number(table_data['min_bet'])} {currency_name}."
       ))
       return
 
@@ -592,6 +611,67 @@ class RouletteCommands(commands.Cog):
       return
 
     await self._close_table(ctx.channel)
+
+  @command_roulette.group(name="info")
+  async def command_roulette_info(self, ctx: commands.Context):
+    """Roulette info commands"""
+    pass
+
+  @command_roulette_info.group(name="losses", aliases=["lost"])
+  async def command_roulette_info_losses(self, ctx: commands.Context):
+    """Check total roulette losses for a member"""
+    pass
+
+  @command_roulette_info_losses.command(name="member", aliases=["user", "player"])
+  async def command_roulette_info_losses_member(self, ctx: commands.Context, member: discord.Member):
+    """Check total roulette losses for a member"""
+    if member is None:
+      member = ctx.author
+
+    total_losses = await self.config.member(member).gambling_losses()
+    currency_name = await bank.get_currency_name(ctx.guild)
+
+    await ctx.send(
+      f"{member.mention} has lost a total of {humanize_number(total_losses)} {currency_name} in roulette."
+    )
+
+  @command_roulette_info_losses.command(name="server", aliases=["total", "guild"])
+  async def command_roulette_info_losses_server(self, ctx: commands.Context):
+    """Check total roulette losses for the server"""
+    total_losses = await self.config.guild(ctx.guild).GAMBLING.ROULETTE.TOTAL_LOST()
+    currency_name = await bank.get_currency_name(ctx.guild)
+
+    await ctx.send(
+      f"This server has lost a total of {humanize_number(total_losses)} {currency_name} in roulette."
+    )
+
+  @command_roulette_info_losses.command(name="leaderboard", aliases=["lb", "ranking"])
+  async def command_roulette_info_losses_leaderboard(self, ctx: commands.Context):
+    """Get the roulette losses leaderboard for the server"""
+    all_members = await self.config.all_members(ctx.guild)
+    currency_name = await bank.get_currency_name(ctx.guild)
+
+    losses_list = []
+    for member_id, data in all_members.items():
+      losses = data.get("gambling_losses", 0)
+      if losses > 0:
+        losses_list.append((member_id, losses))
+
+    # sort by losses
+    losses_list.sort(key=lambda x: x[1], reverse=True)
+
+    # build leaderboard message
+    leaderboard_msg = "Roulette Losses Leaderboard:\n"
+    for rank, (member_id, losses) in enumerate(losses_list[:10], start=1):
+      member = ctx.guild.get_member(int(member_id))
+      if member:
+        leaderboard_msg += f"{rank}. **{member.display_name}**\t\t{humanize_number(losses)}\n"
+
+    if not losses_list:
+      leaderboard_msg = "No roulette losses recorded yet."
+
+    await ctx.send(leaderboard_msg)
+
 
   @command_roulette.group(name="help", aliases=["?"])
   async def command_roulette_help(self, ctx: commands.Context):

@@ -58,12 +58,13 @@ class WaterfallEconomy(
           "poor": {"MIN_BET": 10, "MAX_BET": 1_000, "FEE": 10},
           "standard": {"MIN_BET": 100, "MAX_BET": 10_000, "FEE": 100},
           "high_roller": {"MIN_BET": 1_000, "MAX_BET": 100_000, "FEE": 1_000},
-          "irresponsible": {"MIN_BET": 10_000, "MAX_BET": 100_000_000, "FEE": 10_000},
+          "irresponsible": {"MIN_BET": 10_000, "MAX_BET": None, "FEE": 10_000},
         },
         "MAX_DURATION": 600,
         "MIN_DURATION": 30,
         "OPEN_TABLES": {},
         "TABLE_OPEN_COST": None,
+        "TOTAL_LOST": 0,
       },
       "RUSSIAN_ROULETTE": {
         "MIN_BET": 100,
@@ -83,7 +84,9 @@ class WaterfallEconomy(
     "job_global_times_worked": 0,
     "job_last_quit": 0,
     "steal_cooldown": 0,
-    "steal_immunity": 0
+    "steal_immunity": 0,
+    "gambling_losses": 0,
+    "gambling_wins": 0,
   }
 
   default_role_settings = {
