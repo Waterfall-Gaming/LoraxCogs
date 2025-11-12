@@ -440,12 +440,22 @@ class RouletteCommands(commands.Cog):
       ))
       return
 
+    if ctx.channel.type in [discord.ChannelType.public_thread, discord.ChannelType.private_thread]:
+      await ctx.send(embed=ErrorEmbed(
+        title="Invalid Channel",
+        message="Roulette tables cannot be opened inside threads."
+      ))
+      return
+
     # now that we've validated stuff, create the table and thread and stuff
 
     table_name = table_name.format(user=ctx.author.display_name, time=datetime.now().strftime('%H:%M on %d/%m/%Y'))
 
     # create a thread for the table
-    table = await ctx.channel.create_thread(name=table_name, auto_archive_duration=60)
+    table = await ctx.channel.create_thread(
+        message=ctx.message,
+        name=table_name, auto_archive_duration=60
+    )
 
     # write the table's thread into config
     self.open_tables[str(table.id)] = {
