@@ -314,7 +314,7 @@ class RouletteCommands(commands.Cog):
     await asyncio.sleep(delay)
 
     # table was already spun manually
-    if not table.guild.fetch_channel(table.id):
+    if not (await table.guild.fetch_channel(table.id)):
       return
 
     # mark the table as closed
