@@ -11,7 +11,7 @@ import discord
 from redbot.core import Config, commands, bot
 from discord.ext import tasks
 
-from hoyogames.util import Games, Game, GameConverter, CodeRedeemView
+from hoyogames.util import Games, Game, GameConverter, CodeRedeemView, MarkRedeemedButton, ReportInvalidButton
 
 
 class HoYoGames(commands.Cog):
@@ -73,6 +73,12 @@ class HoYoGames(commands.Cog):
     # create a http request session object on load
     self.session = aiohttp.ClientSession()
 
+    # set up dynamic buttons
+    MarkRedeemedButton.config = self.config
+    ReportInvalidButton.config = self.config
+
+    self.bot.add_dynamic_items(MarkRedeemedButton, ReportInvalidButton)
+
     # register update tasks for each game
     self.check_codes.start()
 
@@ -96,7 +102,7 @@ class HoYoGames(commands.Cog):
       return "*Unknown Rewards*\n*Try redeem it yourself ;)*"
 
     rewards_list = rewards.split(";")
-    formatted_rewards = "\n".join(f"- {reward.strip().replace('*', '×')}" for reward in rewards_list if reward.strip())
+    formatted_rewards = "\n".join(f"- {reward.strip().replace('*', ' × ')}" for reward in rewards_list if reward.strip())
 
     return formatted_rewards
 
@@ -233,7 +239,7 @@ class HoYoGames(commands.Cog):
     await ctx.send(f"This channel has been unsubscribed from {game.human_name} code updates.")
 
 
-  @tasks.loop(minutes=30)
+  @tasks.loop(minutes=1)
   async def check_codes(self):
     """
     Run scheduled task for channels
@@ -276,7 +282,7 @@ class HoYoGames(commands.Cog):
               embed.add_field(name="Rewards", value=rewards)
               # embed.add_field(name="Redeem Link", value=f"[Click to Redeem]({link})", inline=False)
 
-              await channel.send(embed=embed, view=CodeRedeemView(self.config, game, code["code"]))
+              await channel.send(embed=embed, view=CodeRedeemView(game, code["code"], True))
 
 
   @check_codes.before_loop

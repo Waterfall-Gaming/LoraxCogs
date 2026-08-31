@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import re
+from typing import ClassVar
 
 from redbot.core import commands, Config
 import discord.ui
@@ -101,62 +102,99 @@ class GameConverter(commands.Converter):
 
     raise commands.BadArgument(f"'{argument}' isn't a recognised game.")
 
-class CodeRedeemView(discord.ui.View):
-  def __init__(self, config: Config, game: Games, code: str, persistent: bool = False):
-    super().__init__(timeout=None if persistent else 120)
+class MarkRedeemedButton(discord.ui.DynamicItem[discord.ui.Button],
+                         template=r"code:mark_redeemed:(?P<game>[\w-]+):(?P<code>[\w-]+)"):
+  config: ClassVar[Config]  # set by the cog on load
+
+  def __init__(self, game: Games, code: str):
+    super().__init__(
+        discord.ui.Button(
+            label="Mark as Redeemed",
+            emoji="✅",
+            style=discord.ButtonStyle.success,
+            custom_id=f"code:mark_redeemed:{game.identifier}:{code}",
+            row=0,
+        )
+    )
     self.game = game
     self.code = code
-    self.config = config
 
-    url = self.game.generate_redeem_link(self.code)
+  @classmethod
+  async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str]):
+    game = next(g for g in Games if g.identifier == match["game"])
+    return cls(game, match["code"])
 
-    if url:
-      self.add_item(discord.ui.Button(
-          label="Redeem!",
-          style=discord.ButtonStyle.primary,
-          url=url,
-          emoji="🎁",
-          row=1
-      ))
-
-  @discord.ui.button(label="Mark as Redeemed", emoji="✅", style=discord.ButtonStyle.success, custom_id="code:mark_redeemed", row=0)
-  async def mark_redeemed(self, interaction: discord.Interaction, button: discord.ui.Button):
-    # mark the code as redeemed for the user
+  async def callback(self, interaction: discord.Interaction):
     user_cfg = await self.config.user(interaction.user).all()
-    user_cfg["redeemed"][self.game.identifier].append(self.code)
+    user_cfg.setdefault("redeemed", {}).setdefault(self.game.identifier, []).append(self.code)
     await self.config.user(interaction.user).set(user_cfg)
 
     await interaction.response.send_message(
         f"Marked code `{self.code}` as redeemed for **{self.game.human_name}**.", ephemeral=True
     )
 
-  @discord.ui.button(label="Report Invalid", emoji="⚠️", style=discord.ButtonStyle.danger, custom_id="code:report_invalid", row=0)
-  async def report_invalid(self, interaction: discord.Interaction, button: discord.ui.Button):
-    # report the code as invalid on the bot
-    user_id = interaction.user.id
 
+class ReportInvalidButton(discord.ui.DynamicItem[discord.ui.Button],
+                          template=r"code:report_invalid:(?P<game>[\w-]+):(?P<code>[\w-]+)"):
+  config: ClassVar[Config]  # set by the cog on load
+
+  def __init__(self, game: Games, code: str):
+    super().__init__(
+        discord.ui.Button(
+            label="Report Invalid",
+            emoji="⚠️",
+            style=discord.ButtonStyle.danger,
+            custom_id=f"code:report_invalid:{game.identifier}:{code}",
+            row=0,
+        )
+    )
+    self.game = game
+    self.code = code
+
+  @classmethod
+  async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str]):
+    game = next(g for g in Games if g.identifier == match["game"])
+    return cls(game, match["code"])
+
+  async def callback(self, interaction: discord.Interaction):
+    user_id = interaction.user.id
     global_cfg = await self.config.all()
 
-    game_reported_codes = global_cfg["INVALID_CODES"][self.game.identifier]
+    reported = global_cfg.setdefault("INVALID_CODES", {}).setdefault(self.game.identifier, {})
 
-    if self.code not in game_reported_codes:
-      game_reported_codes += { self.code: [user_id] }
-    elif user_id not in game_reported_codes[self.code]:
-      game_reported_codes[self.code] += user_id
+    if self.code not in reported:
+      reported[self.code] = [user_id]
+    elif user_id not in reported[self.code]:
+      reported[self.code].append(user_id)
     else:
       await interaction.response.send_message(
           f"You have already reported code `{self.code}` as invalid for **{self.game.human_name}**.", ephemeral=True
       )
       return
 
-    global_cfg["INVALID_CODES"][self.game.identifier] = game_reported_codes
-
     await self.config.set(global_cfg)
 
     await interaction.response.send_message(
-        f"Reported code `{self.code}` as invalid for **{self.game.human_name}****.", ephemeral=True
+        f"Reported code `{self.code}` as invalid for **{self.game.human_name}**.", ephemeral=True
     )
 
+
+class CodeRedeemView(discord.ui.View):
+  def __init__(self, game: Games, code: str, persistent: bool = False):
+    super().__init__(timeout=None if persistent else 120)
+
+    url = game.generate_redeem_link(code)
+    if url:
+      self.add_item(discord.ui.Button(
+          label="Redeem!",
+          style=discord.ButtonStyle.primary,
+          url=url,
+          emoji="🎁",
+          row=1,
+      ))
+
+    self.add_item(MarkRedeemedButton(game, code))
+    self.add_item(ReportInvalidButton(game, code))
 
 
 
